@@ -26,6 +26,10 @@ char* beExportGameState(beGameState* gamestate)
     return exportedGameState;
 }
 
+/** \brief Destroys a gamestate, cleaning up ALL of its memory.
+ *
+ * \param gamestate beGameState*
+ */
 void beDestroyGameState(beGameState* gamestate)
 {
     beDestroyBoard(gamestate->board);

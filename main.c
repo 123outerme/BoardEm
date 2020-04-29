@@ -39,12 +39,12 @@ int main(int argc, char* argv[])
 
     int cellCount = 1;
     beCell cells[cellCount];
-    beInitCell(&(cells[0]), points, 3, NULL, 0);
+    beInitCell(&(cells[0]), points, 3, NULL, 0, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
 
 
     //initialize board (needs players + cells)
     beBoard board;
-    beInitBoard(&board, players, 2, NULL, cells, 1, 0, 0, NULL);
+    beInitBoard(&board, players, 2, cells, 1, "assets/cb.bmp", 960, 480, NULL);
 
     //initialize ruleset
     beRuleset rules;
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
     //de-initialize
 
     //temp pause
-    //waitForKey(true);
+    waitForKey(true);
 
     beDestroyGameState(&gamestate);
 
@@ -95,10 +95,20 @@ int gameLoop(beGameState* gamestate)
 {
     bool quit = false;
     int returnCode = 0;
+
+    //test init; not sure how I should handle drawing the board
+    cCamera testCam;
+    initCCamera(&testCam, (cDoubleRect) {0, 0, 20, 10}, 1.0, 0.0);
+    cScene testScene;
+    initCScene(&testScene, (SDL_Color) {0xFF, 0xFF, 0xFF, 0xFF}, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
+
     while(!quit)
     {
         for(int i = 0; i < gamestate->board->numPlayers; i++)
         {
+            //test board draw
+            drawCScene(&testScene, true, true);
+
             //for all players, allow players to perform their turn
             gamestate->ruleset->playerTurn(gamestate->board, &(gamestate->board->players[i]));
 
