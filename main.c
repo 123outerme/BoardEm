@@ -20,7 +20,7 @@ void testBonus(beBoard* board);
 
 int main(int argc, char* argv[])
 {
-    initCoSprite(NULL, "Hello World", 1080, 960, "./assets/Px437_ITT_BIOS_X.ttf", 24, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    initCoSprite(NULL, "Hello World", 960, 480, "./assets/Px437_ITT_BIOS_X.ttf", 24, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     //initialize players
     int playerCount = 2;
@@ -63,6 +63,30 @@ int main(int argc, char* argv[])
     //waitForKey(true);
 
     beDestroyGameState(&gamestate);
+
+    /*
+    //testing cGetInputState
+    bool quit = false;
+    cInputState state;
+    while(!quit)
+    {
+        state = cGetInputState(true);
+        if (state.isClick)
+        {
+            printf("coords (%d, %d)\n", state.click.x, state.click.y);
+            quit = true;
+        }
+        if (state.keyStates[SDL_SCANCODE_F] && state.keyStates[SDL_SCANCODE_G])
+        {
+            printf("printfs in chat fellas\n");
+            quit = true;
+        }
+
+        if (state.quitInput)
+            quit = true;
+    }
+    */
+
     closeCoSprite();
     return 0;
 }
@@ -75,8 +99,8 @@ int gameLoop(beGameState* gamestate)
     {
         for(int i = 0; i < gamestate->board->numPlayers; i++)
         {
-            gamestate->ruleset->playerTurn(gamestate->board, &(gamestate->board->players[i]));
             //for all players, allow players to perform their turn
+            gamestate->ruleset->playerTurn(gamestate->board, &(gamestate->board->players[i]));
 
             //check gamestate to update and/or draw scores
             gamestate->ruleset->updateScores(gamestate->board);

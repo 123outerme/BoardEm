@@ -70,7 +70,7 @@ void beDestroyPlayer(bePlayer* player)
     player->name = NULL;
     player->isLocal = false;
     player->isAI = false;
-    player->active = false;//
+    player->active = false;
     if (player->freeSubclass != NULL)
         player->freeSubclass(player->subclass);
 
