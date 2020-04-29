@@ -1,0 +1,19 @@
+#ignore the media folder
+/media/
+/obj/
+/bin/
+/builds/
+/be/
+/be-bin/
+/CoSprite/
+/output/
+*.cbp
+*.depend
+*.layout
+*.cfg
+*.exe
+exported.bin
+*.bmp
+*.dll
+*.crt
+*.pem
