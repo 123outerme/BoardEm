@@ -35,11 +35,14 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cResource* b
 {
     board->players = calloc(numPlayers, sizeof(bePlayer));
     memcpy(board->players, players, numPlayers * sizeof(bePlayer));
-
     board->numPlayers = numPlayers;
+
     board->boardResource = boardRes;
+
     board->cells = calloc(cellsSize, sizeof(cDoublePt));
     memcpy(board->cells, cells, cellsSize * sizeof(beCell));
+    board->cellsSize = cellsSize;
+
     board->width = w;
     board->height = h;
     board->applyPlayerMovement = applyPlayerMovement;

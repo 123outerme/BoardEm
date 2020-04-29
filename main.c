@@ -107,8 +107,9 @@ void testUpdate(beBoard* board)
 
 int testWinCon(beBoard* board)
 {
+    static int i = 0;
     printf("testing win con\n");
-    return 1;
+    return i++;
 }
 
 void testBonus(beBoard* board)
