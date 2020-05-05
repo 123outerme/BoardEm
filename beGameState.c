@@ -15,7 +15,7 @@ void beInitGameState(beGameState* gamestate, beRuleset* ruleset, beBoard* board)
     gamestate->onlineState = BE_OFFLINE;
 }
 
-/** \brief Exports the gamestate to JSON format, outputted to `exportedGameState`.
+/** \brief Exports the gamestate to JSON format, outputted to `exportedGameState`. Does not export the associated cScene or any keystates.
  *
  * \param gamestate beGameState*
  * \return char* - the address of `exportedGameState`

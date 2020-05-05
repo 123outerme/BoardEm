@@ -2,6 +2,7 @@
 #define BEBOARDGAME_H_INCLUDED
 
 #include "CoSprite/csGraphics.h"
+#include "CoSprite/csInput.h"
 #include "bePlayer.h"
 #include <stdlib.h>
 
@@ -12,6 +13,7 @@ typedef struct _beCell
     struct _beCell* neighbors;  /**< Touching cells allocated clockwise from this cell starting from 0 = most North (favoring East) */
     int neighborsSize;  /**< The length of `neighbors` */
     bePlayer* housedPlayer;  /**< The player that currently resides in this cell (NULL if none) */
+    cDoublePt center;  /**< The automatically-filled center. Used for drawing piece movement */
     SDL_Color outlineColor;  /**< The color that will be used for the outline when drawn */
 } beCell;
 
@@ -31,16 +33,16 @@ typedef struct _beBoard
 
 typedef struct _beRuleset
 {
-    void (*playerTurn)(beBoard*, bePlayer*);
+    int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState);  /**< Output 1 for quit, 0 for continue */
     void (*updateScores)(beBoard*);
     int (*checkWin)(beBoard*);
     void (*applyMoneyGameBonus)(beBoard*);  /**< If landing on "GO" in "Monopoly"-type game, apply this bonus */
 } beRuleset;
 
-void beInitCell(beCell* cell, cDoublePt* pts, int cellsSize, beCell* neighbors, int neighborsSize, SDL_Color outlineColor);
+void beInitCell(beCell* cell, cDoublePt* pts, int cellsSize, beCell* neighbors, int neighborsSize, cDoublePt* center, SDL_Color outlineColor);
 void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, beCell* cells, int cellsSize, char* bgImgPath, int w, int h, void (*applyPlayerMovement)(struct _beBoard*, bePlayer*));
 void beInitRuleset(beRuleset* ruleset,
-                    void (*playerTurn)(beBoard*, bePlayer*),
+                    int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
                     void (*applyMoneyGameBonus)(beBoard*));

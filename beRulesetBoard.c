@@ -6,8 +6,10 @@
  * \param pts cDoublePt*
  * \param ptsSize int
  * \param neighbors beCell*
+ * \param center cDoublePt* - Pass NULL for automatic center (width / 2, height / 2)
+ * \param outline SDL_Color
  */
-void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, beCell* neighbors, int neighborsSize, SDL_Color outlineColor)
+void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, beCell* neighbors, int neighborsSize, cDoublePt* center, SDL_Color outlineColor)
 {
     //*
     //printf("-- %d\n", ptsSize);
@@ -20,9 +22,33 @@ void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, beCell* neighbors, in
     memcpy(cell->neighbors, neighbors, neighborsSize * sizeof(beCell));
     cell->neighborsSize = neighborsSize;
 
-    cell->outlineColor = outlineColor;
-
     cell->housedPlayer = NULL;
+
+    if (center == NULL)
+    {
+        //iterate through each point, find the min and max x/y. This will find the width and height, then divide by 2 to yield center
+        double minX = pts[0].x, maxX = pts[0].x, minY = pts[0].y, maxY = pts[0].y;
+        for(int i = 1; i < ptsSize; i++)
+        {
+            if (pts[i].x > maxX)
+                maxX = pts[i].x;
+
+            if (pts[i].x < minX)
+                minX = pts[i].x;
+
+            if (pts[i].y > maxY)
+                maxY = pts[i].y;
+
+            if (pts[i].y < minY)
+                minY = pts[i].y;
+        }
+        cell->center = (cDoublePt) {(maxX + minX) / 2.0, (maxY + minY) / 2.0};
+        //printf("%f, %f\n", cell->center.x, cell->center.y);
+    }
+    else
+        cell->center = *center;
+
+    cell->outlineColor = outlineColor;
 }
 
 /** \brief
@@ -63,12 +89,12 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, beCell* cell
  * \param void (*applyMoneyGameBonus)(beBoard*)
  */
 void beInitRuleset(beRuleset* ruleset,
-                    void (*playerTurn)(beBoard*, bePlayer*),
+                    int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
                     void (*applyMoneyGameBonus)(beBoard*))
 {
-    ruleset->playerTurn = playerTurn;
+    ruleset->playerTurnFrame = playerTurnFrame;
     ruleset->updateScores = updateScores;
     ruleset->checkWin = checkWin;
     ruleset->applyMoneyGameBonus = applyMoneyGameBonus;
@@ -99,9 +125,9 @@ void beDestroyCell(beCell* cell)
     cell->neighbors = NULL;
     cell->neighborsSize = 0;
 
-    cell->outlineColor = (SDL_Color) {0, 0, 0, 0};
-
     //cleanup misc
+    cell->outlineColor = (SDL_Color) {0, 0, 0, 0};
+    cell->center = (cDoublePt) {0, 0};
     cell->housedPlayer = NULL;
 }
 
@@ -153,10 +179,50 @@ void beDestroyBoard(beBoard* board)
  */
 void beDestroyRuleset(beRuleset* ruleset)
 {
-    ruleset->playerTurn = NULL;
+    ruleset->playerTurnFrame = NULL;
     ruleset->updateScores = NULL;
     ruleset->checkWin = NULL;
     ruleset->applyMoneyGameBonus = NULL;
+}
+
+
+/** \brief Helper function for board drawing (CoSprite use only)
+ *
+ * \param cell beCell
+ * \param camera cCamera
+ */
+void beDrawCellCoSprite(beCell cell, cCamera camera)
+{
+    //set the per-cell draw color
+    SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
+
+    cDoublePt cellPoints[cell.ptsSize];
+
+    //printf("testing draw cell - %d\n", board->cells[i].ptsSize);
+
+    for(int i = 0; i < cell.ptsSize; i++)
+        {
+            //transform initial points to where they would visually be, by the camera's rotation/position/zoom/scaling
+            double x = cell.points[i].x, y = cell.points[i].y;
+            cellPoints[i] = (cDoublePt) {x * camera.zoom * global.windowW / camera.rect.w, y * camera.zoom * global.windowH / camera.rect.h};
+
+            //if board isn't fixed do these three lines. The board is never set to be fixed though
+            cellPoints[i] = rotatePoint(cellPoints[i], (cDoublePt) {global.windowW / 2, global.windowH / 2}, camera.degrees);
+            cellPoints[i].x -= (camera.rect.x * global.windowW / camera.rect.w);
+            cellPoints[i].y -= (camera.rect.y * global.windowH / camera.rect.h);
+        }
+        for(int i = 0; i < cell.ptsSize; i++)
+        {
+            //draw a line between the ith point and the ((i + 1) % ptsSize)th point
+            SDL_RenderDrawLine(global.mainRenderer, (int) cellPoints[i].x, (int) cellPoints[i].y,
+                               (int) cellPoints[(i + 1) % cell.ptsSize].x, (int) cellPoints[(i + 1) % cell.ptsSize].y);
+
+            /* temp center point drawing
+            SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0xFF, 0x00, 0xFF);
+            SDL_RenderDrawPoint(global.mainRenderer, cell.center.x * global.windowW / camera.rect.w, cell.center.y * global.windowH / camera.rect.h);
+            SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
+            //*/
+        }
 }
 
 //Function pointer "targets"
@@ -164,8 +230,6 @@ void beDestroyRuleset(beRuleset* ruleset)
  *
  * \param ptrBoard void*
  * \param camera cCamera
- * \return void
- *
  */
 void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
 {
@@ -175,39 +239,14 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
 
     drawCSprite(board->bgImage, camera, false, false);
 
-
     //store previous draw color
     Uint8 prevR = 0x00, prevG = 0x00, prevB = 0x00, prevA = 0xFF;
     SDL_GetRenderDrawColor(global.mainRenderer, &prevR, &prevG, &prevB, &prevA);
 
+    //draw cells
     for(int i = 0; i < board->cellsSize; i++)
-    {
-        //set the per-cell draw color
-        SDL_SetRenderDrawColor(global.mainRenderer, board->cells[i].outlineColor.r, board->cells[i].outlineColor.g, board->cells[i].outlineColor.b, board->cells[i].outlineColor.a);
+        beDrawCellCoSprite(board->cells[i], camera);
 
-        cDoublePt cellPoints[board->cells[i].ptsSize];
-
-        //printf("testing draw cell - %d\n", board->cells[i].ptsSize);
-
-        for(int j = 0; j < board->cells[i].ptsSize; j++)
-        {
-            //transform initial points to where they would visually be, by the camera's rotation/position/zoom/scaling
-            double x = board->cells[i].points[j].x, y = board->cells[i].points[j].y;
-            cellPoints[j] = (cDoublePt) {x * camera.zoom * global.windowW / camera.rect.w, y * camera.zoom * global.windowH / camera.rect.h};
-
-            //if board isn't fixed do these three lines. The board is never set to be fixed though
-            cellPoints[j] = rotatePoint(cellPoints[j], (cDoublePt) {global.windowW / 2, global.windowH / 2}, camera.degrees);
-            cellPoints[j].x -= (camera.rect.x * global.windowW / camera.rect.w);
-            cellPoints[j].y -= (camera.rect.y * global.windowH / camera.rect.h);
-        }
-        for(int j = 0; j < board->cells[i].ptsSize; j++)
-        {
-            //draw a line between the jth point and the ((j + 1) % ptsSize)th point
-            SDL_RenderDrawLine(global.mainRenderer, (int) cellPoints[j].x, (int) cellPoints[j].y,
-                               (int) cellPoints[(j + 1) % board->cells[i].ptsSize].x, (int) cellPoints[(j + 1) % board->cells[i].ptsSize].y);
-        }
-        //draw cells
-    }
     //reset draw color
     SDL_SetRenderDrawColor(global.mainRenderer, prevR, prevG, prevB, prevA);
 }

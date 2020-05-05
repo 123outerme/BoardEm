@@ -5,14 +5,20 @@
 //#include "CoSprite/csMap.h"
 
 #include "beGameState.h"
+//#include "Games/Conqueror.h"
+//#include "Games/Corporation.h"
+//#include "Games/SnakesLadders.h"
 
+#define TURNFRAME_QUIT 1
+#define TURNFRAME_CONTINUE 0
 
 //game functions
 int gameLoop(beGameState* gamestate);
 
+cInputState takeTurn(beGameState* gamestate, int playerIndex);
 
 //test functions
-void testTurn(beBoard* board, bePlayer* player);
+int testTurn(beBoard* board, bePlayer* player, cInputState input);
 void testUpdate(beBoard* board);
 int testWinCon(beBoard* board);
 void testBonus(beBoard* board);
@@ -25,9 +31,11 @@ int main(int argc, char* argv[])
     //initialize players
     int playerCount = 2;
     bePlayer players[playerCount];
+    char* playerNames[2] = {"One", "Two"};
     for(int i = 0; i < playerCount; i++)
     {
         beInitPlayerEmpty(&(players[i]));
+        players[i].name = playerNames[i];
     }
 
     //initialize cells
@@ -39,12 +47,15 @@ int main(int argc, char* argv[])
 
     int cellCount = 1;
     beCell cells[cellCount];
-    beInitCell(&(cells[0]), points, 3, NULL, 0, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
+    {
+        cDoublePt tempCtr = {1.75, 1.33};
+        beInitCell(&(cells[0]), points, 3, NULL, 0, &tempCtr, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
+    }
 
 
     //initialize board (needs players + cells)
     beBoard board;
-    beInitBoard(&board, players, 2, cells, 1, "assets/cb.bmp", 960, 480, NULL);
+    beInitBoard(&board, players, 2, cells, 1, "./assets/cb.bmp", 20 * 48, 48 * 10, NULL);
 
     //initialize ruleset
     beRuleset rules;
@@ -60,7 +71,7 @@ int main(int argc, char* argv[])
     //de-initialize
 
     //temp pause
-    waitForKey(true);
+    //waitForKey(true);
 
     beDestroyGameState(&gamestate);
 
@@ -98,7 +109,7 @@ int gameLoop(beGameState* gamestate)
 
     //test init; not sure how I should handle drawing the board
     cCamera testCam;
-    initCCamera(&testCam, (cDoubleRect) {0, 0, 20, 10}, 1.0, 0.0);
+    initCCamera(&testCam, (cDoubleRect) {0, 0, 18, 10}, 1.0, 0.0);
     cScene testScene;
     initCScene(&testScene, (SDL_Color) {0xFF, 0xFF, 0xFF, 0xFF}, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
 
@@ -110,7 +121,15 @@ int gameLoop(beGameState* gamestate)
             drawCScene(&testScene, true, true);
 
             //for all players, allow players to perform their turn
-            gamestate->ruleset->playerTurn(gamestate->board, &(gamestate->board->players[i]));
+            cInputState state = takeTurn(gamestate, i);
+            if (state.quitInput)
+            {
+                //force quit; shut down online (if any), pass host (if necessary)
+                printf("force quitting\n");
+                quit = true;
+                break;
+            }
+            //gamestate->ruleset->playerTurnFrame(gamestate->board, &(gamestate->board->players[i]));
 
             //check gamestate to update and/or draw scores
             gamestate->ruleset->updateScores(gamestate->board);
@@ -127,10 +146,57 @@ int gameLoop(beGameState* gamestate)
     return returnCode;
 }
 
-void testTurn(beBoard* board, bePlayer* player)
+cInputState takeTurn(beGameState* gamestate, int playerIndex)
 {
-    printf("testing turn\n");
+    bool quit = false;
+    cInputState state;
+    while(!quit)
+    {
+        state = cGetInputState(true);
+
+        //intercept, check for generic key options like pausing, quitting, etc.
+        if (state.quitInput)
+            quit = true;
+
+
+        //pass to customized turn stuff
+        if (!(gamestate->board->players[playerIndex].isAI) && gamestate->board->players[playerIndex].isLocal)
+        {  //if it's the local human player's turn
+            int code = gamestate->ruleset->playerTurnFrame(gamestate->board, &(gamestate->board->players[playerIndex]), state);
+            if (code == TURNFRAME_QUIT)
+            {
+                printf("--pressed Enter\n");
+                quit = true;
+            }
+        }
+        else
+        {
+            if (!(gamestate->board->players[playerIndex].isLocal))
+            {
+                //wait for online turn to be over
+            }
+            else
+            {
+                if (gamestate->board->players[playerIndex].isAI)
+                {
+                    //calculate AI moves
+                }
+            }
+        }
+    }
+
+    return state;
+}
+
+int testTurn(beBoard* board, bePlayer* player, cInputState input)
+{
+    printf("testing turn for player %s\n", player->name);
+    //waitForKey(true);
     //nothing
+    if (input.keyStates[SDL_SCANCODE_RETURN])
+        return 1;
+
+    return 0;
 }
 
 void testUpdate(beBoard* board)

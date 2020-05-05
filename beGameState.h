@@ -12,6 +12,7 @@ typedef struct _beGameState
 {
     beRuleset* ruleset;  /**< Keeps track of the current Ruleset */
     beBoard* board;  /**< Keeps track of the current Board */
+    cScene* scene;  /**< Context for keypresses, etc. */
     int onlineState; /**< 0 - offline, 1 - non-host, 2 - host */
 } beGameState;
 
