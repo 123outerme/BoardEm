@@ -97,7 +97,7 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
     char* pointsFile = calloc(MAX_PATH, sizeof(char));
     strcpy(pointsFile, "assets/");
     strcat(pointsFile, folderName);
-    strcat(pointsFile, "/cells.cfg");  //gives us a string that takes us to our cells
+    strcat(pointsFile, "/cells.dat");  //gives us a string that takes us to our cells
 
     //printf("%s\n", pointsFile);
 
