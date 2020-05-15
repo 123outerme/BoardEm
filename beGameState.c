@@ -22,6 +22,7 @@ void beInitGameState(beGameState* gamestate, beRuleset* ruleset, beBoard* board)
  */
 char* beExportGameState(beGameState* gamestate)
 {
+    gamestate->board->width = -1;
     //TODO
     return exportedGameState;
 }

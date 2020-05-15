@@ -5,9 +5,9 @@
 //#include "CoSprite/csMap.h"
 
 #include "beGameState.h"
-//#include "Games/Conqueror.h"
-//#include "Games/Corporation.h"
-//#include "Games/SnakesLadders.h"
+#include "games/Conqueror.h"
+//#include "games/Corporation.h"
+//#include "games/SnakesLadders.h"
 
 #define TURNFRAME_QUIT 1
 #define TURNFRAME_CONTINUE 0
@@ -16,6 +16,7 @@
 int gameLoop(beGameState* gamestate);
 
 cInputState takeTurn(beGameState* gamestate, int playerIndex);
+cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera);
 
 //test functions
 int testTurn(beBoard* board, bePlayer* player, cInputState input);
@@ -23,10 +24,18 @@ void testUpdate(beBoard* board);
 int testWinCon(beBoard* board);
 void testBonus(beBoard* board);
 
+//global vars
+bool debug;
 
 int main(int argc, char* argv[])
 {
-    initCoSprite(NULL, "Hello World", 960, 480, "./assets/Px437_ITT_BIOS_X.ttf", 24, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    debug = false;
+    if (argc > 0)
+    {
+        if (strcmp(argv[0], "-d") == 0 || strcmp(argv[0], "--debug"))
+            debug = true;
+    }
+    initCoSprite(NULL, "Board Em!", 960, 480, "./assets/Px437_ITT_BIOS_X.ttf", 24, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     //initialize players
     int playerCount = 2;
@@ -38,6 +47,11 @@ int main(int argc, char* argv[])
         players[i].name = playerNames[i];
     }
 
+    //init the correct board
+    beBoard board;
+    beConstructGameBoard(&board, players, playerCount, "Conqueror");
+
+    /*
     //initialize cells
     int pointCount = 3;
     cDoublePt* points = calloc(pointCount, sizeof(cDoublePt));
@@ -49,13 +63,13 @@ int main(int argc, char* argv[])
     beCell cells[cellCount];
     {
         cDoublePt tempCtr = {1.75, 1.33};
-        beInitCell(&(cells[0]), points, 3, NULL, 0, &tempCtr, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
+        beInitCell(&(cells[0]), points, 3, &tempCtr, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
     }
 
 
     //initialize board (needs players + cells)
-    beBoard board;
     beInitBoard(&board, players, 2, cells, 1, "./assets/cb.bmp", 20 * 48, 48 * 10, NULL);
+    //*/
 
     //initialize ruleset
     beRuleset rules;
@@ -109,17 +123,16 @@ int gameLoop(beGameState* gamestate)
 
     //test init; not sure how I should handle drawing the board
     cCamera testCam;
-    initCCamera(&testCam, (cDoubleRect) {0, 0, 18, 10}, 1.0, 0.0);
+    initCCamera(&testCam, (cDoubleRect) {0, 0, 36, 20}, 1.0, 0.0);
     cScene testScene;
     initCScene(&testScene, (SDL_Color) {0xFF, 0xFF, 0xFF, 0xFF}, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
+    gamestate->scene = &testScene;
+    startTime = SDL_GetTicks();
 
     while(!quit)
     {
         for(int i = 0; i < gamestate->board->numPlayers; i++)
         {
-            //test board draw
-            drawCScene(&testScene, true, true);
-
             //for all players, allow players to perform their turn
             cInputState state = takeTurn(gamestate, i);
             if (state.quitInput)
@@ -150,13 +163,58 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
 {
     bool quit = false;
     cInputState state;
+    int framerate;
+
     while(!quit)
     {
+        //test board draw
+        drawCScene(gamestate->scene, true, true, &framerate);
         state = cGetInputState(true);
 
         //intercept, check for generic key options like pausing, quitting, etc.
         if (state.quitInput)
             quit = true;
+
+        if (state.isClick)
+        {
+            //store the click coords (in px)
+            cDoublePt clickPt = (cDoublePt) {state.click.x, state.click.y};
+
+            clickPt = windowCoordToCameraCoord(clickPt, *(gamestate->scene->camera));
+
+            printf("click on: {%f, %f}\n", clickPt.x, clickPt.y);
+            //printf("click vs window: {%f, %f}\n", state.click.x * gamestate->scene->camera->rect.w / global.windowW, state.click.y * gamestate->scene->camera->rect.h / global.windowH);
+        }
+
+        // WASD camera movement
+        if (state.keyStates[SDL_SCANCODE_A])
+            gamestate->scene->camera->rect.x -= .01;
+
+        if (state.keyStates[SDL_SCANCODE_D])
+            gamestate->scene->camera->rect.x += .01;
+
+        if (state.keyStates[SDL_SCANCODE_W])
+            gamestate->scene->camera->rect.y -= .01;
+
+        if (state.keyStates[SDL_SCANCODE_S])
+            gamestate->scene->camera->rect.y += .01;
+
+        //Q / E rotation
+        if (state.keyStates[SDL_SCANCODE_Q])
+            gamestate->scene->camera->degrees -= .1;
+
+        if (state.keyStates[SDL_SCANCODE_E])
+            gamestate->scene->camera->degrees += .1;
+
+        //Z / C zoom
+        if (state.keyStates[SDL_SCANCODE_Z])
+            gamestate->scene->camera->zoom -= .001;
+
+        if (state.keyStates[SDL_SCANCODE_C])
+            gamestate->scene->camera->zoom += .001;
+
+        if (state.keyStates[SDL_SCANCODE_F12])
+            printf("Framerate: %d\n", framerate);
 
 
         //pass to customized turn stuff
@@ -188,9 +246,31 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
     return state;
 }
 
+cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera)
+{
+    //add back the offsets
+    pt.x += (camera.rect.x * global.windowW / camera.rect.w);
+    pt.y += (camera.rect.y * global.windowH / camera.rect.h);
+
+    //rotate the point back around
+    pt = rotatePoint(pt, (cDoublePt) {global.windowW / 2, global.windowH / 2}, -1.0 * camera.degrees);
+
+    //un-zoom the points relative to the center of the window
+    pt.x = (pt.x - global.windowW / 2.0) / camera.zoom + global.windowW / 2.0;
+    pt.y = (pt.y - global.windowH / 2.0) / camera.zoom + global.windowH / 2.0;
+
+
+
+    //convert from px to camera scaling units
+    pt.x *= camera.rect.w / global.windowW;
+    pt.y *= camera.rect.h / global.windowH;
+
+    return pt;
+}
+
 int testTurn(beBoard* board, bePlayer* player, cInputState input)
 {
-    printf("testing turn for player %s\n", player->name);
+    printf(/*"testing turn for player %s\n"*/ "", player->name, board->cellsSize);
     //waitForKey(true);
     //nothing
     if (input.keyStates[SDL_SCANCODE_RETURN])
@@ -201,19 +281,22 @@ int testTurn(beBoard* board, bePlayer* player, cInputState input)
 
 void testUpdate(beBoard* board)
 {
-    printf("testing update scores\n");
+    int s = board->cellsSize;
+    printf("testing update scores\n", s);
     //nothing
 }
 
 int testWinCon(beBoard* board)
 {
+    int s = board->cellsSize;
     static int i = 0;
-    printf("testing win con\n");
+    printf("testing win con\n", s);
     return i++;
 }
 
 void testBonus(beBoard* board)
 {
-    printf("testing bonus from GO\n");
+    int s = board->cellsSize;
+    printf("testing bonus from GO\n", s);
     //nothing
 }

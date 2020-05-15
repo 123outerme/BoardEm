@@ -12,7 +12,6 @@
 *.layout
 *.cfg
 *.exe
-exported.bin
 *.bmp
 *.dll
 *.crt
