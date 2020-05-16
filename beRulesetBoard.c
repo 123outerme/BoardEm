@@ -119,7 +119,7 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
 
         int pointCount = strtol(strtok(lineData, "[]"), NULL, 10);
         board->ptsSize[i] = pointCount;
-        board->outlines[i] = (SDL_Color) {0xFF, 0x00, 0x00, 0xFF};
+        //board->outlines[i] = (SDL_Color) {0xFF, 0x00, 0x00, 0xFF};
         //printf("%d\n", pointCount);
         cells[i] = calloc(pointCount, sizeof(cDoublePt));
 
@@ -131,10 +131,11 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
         }
         board->centers[i].x = strtod(strtok(NULL, "(,) "), NULL);
         board->centers[i].y = strtod(strtok(NULL, "(,) "), NULL);
-        char* name = strtok(NULL, ",\" ");
+        char* name = strtok(NULL, "\"-");
         board->names[i] = calloc(strlen(name), sizeof(char));
         strcpy(board->names[i], name);
-
+        board->outlines[i] = (SDL_Color) {strtol(strtok(NULL, "#, "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, "#, "), NULL, 16)};
+        //printf("%x, %x, %x, %x\n", board->outlines[i].r, board->outlines[i].g, board->outlines[i].b, board->outlines[i].a);
         free(lineData);
         //init center point (potentially)
 
@@ -232,9 +233,9 @@ void beInitRuleset(beRuleset* ruleset,
 void beDestroyCell(beCell* cell, int ptsSize)
 {
     //set all points to 0
-    for(int i = 0; i < ptsSize; i++)
+    for(int i = 0; i < cell->ptsSize; i++)
     {
-        cell->points[i].x = 0
+        cell->points[i].x = 0;
         cell->points[i].y = 0;
     }
 
@@ -314,10 +315,10 @@ void beDestroyRuleset(beRuleset* ruleset)
  * \param cell beCell
  * \param camera cCamera
  */
-void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, cCamera camera)
+void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera camera)
 {
     //set the per-cell draw color
-    SDL_SetRenderDrawColor(global.mainRenderer, 0xFF, 0x00, 0x00, 0xFF);
+    SDL_SetRenderDrawColor(global.mainRenderer, color.r, color.g, color.b, color.a);
 
     cDoublePt cellPoints[ptsSize];
 
@@ -371,9 +372,9 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
     //draw cells
     for(int i = 0; i < board->cellsSize; i++)
     {
-        beDrawCellCoSprite(board->cells[i], board->ptsSize[i], camera);
+        beDrawCellCoSprite(board->cells[i], board->ptsSize[i], board->outlines[i], camera);
         /* temp center point drawing
-            SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0xFF, 0x00, 0xFF);
+            SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
             SDL_RenderDrawPoint(global.mainRenderer, board->centers[i].x * global.windowW / camera.rect.w, board->centers[i].y * global.windowH / camera.rect.h);
         //*/
     }

@@ -9,8 +9,11 @@
 //#include "games/Corporation.h"
 //#include "games/SnakesLadders.h"
 
+//defines
 #define TURNFRAME_QUIT 1
 #define TURNFRAME_CONTINUE 0
+
+#define calcWaitTime(x) x == 0 ? 0 : 1000.0 / x
 
 //game functions
 int gameLoop(beGameState* gamestate);
@@ -26,6 +29,7 @@ void testBonus(beBoard* board);
 
 //global vars
 bool debug;
+int framecap = 120;
 
 int main(int argc, char* argv[])
 {
@@ -161,9 +165,13 @@ int gameLoop(beGameState* gamestate)
 
 cInputState takeTurn(beGameState* gamestate, int playerIndex)
 {
+    //in the future: If online and not your turn, let the user look at the map but not change anything
+    //also have a separate section for bots being simulated locally
     bool quit = false;
     cInputState state;
-    int framerate;
+    int framerate = 0, sleepFor = 0;
+    double targetTime = calcWaitTime(framecap);
+    Uint32 lastFrame = SDL_GetTicks();
 
     while(!quit)
     {
@@ -188,30 +196,30 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
 
         // WASD camera movement
         if (state.keyStates[SDL_SCANCODE_A])
-            gamestate->scene->camera->rect.x -= .01;
+            gamestate->scene->camera->rect.x -= .1;
 
         if (state.keyStates[SDL_SCANCODE_D])
-            gamestate->scene->camera->rect.x += .01;
+            gamestate->scene->camera->rect.x += .1;
 
         if (state.keyStates[SDL_SCANCODE_W])
-            gamestate->scene->camera->rect.y -= .01;
+            gamestate->scene->camera->rect.y -= .1;
 
         if (state.keyStates[SDL_SCANCODE_S])
-            gamestate->scene->camera->rect.y += .01;
+            gamestate->scene->camera->rect.y += .1;
 
         //Q / E rotation
         if (state.keyStates[SDL_SCANCODE_Q])
-            gamestate->scene->camera->degrees -= .1;
+            gamestate->scene->camera->degrees -= 1;
 
         if (state.keyStates[SDL_SCANCODE_E])
-            gamestate->scene->camera->degrees += .1;
+            gamestate->scene->camera->degrees += 1;
 
         //Z / C zoom
         if (state.keyStates[SDL_SCANCODE_Z])
-            gamestate->scene->camera->zoom -= .001;
+            gamestate->scene->camera->zoom -= .01;
 
         if (state.keyStates[SDL_SCANCODE_C])
-            gamestate->scene->camera->zoom += .001;
+            gamestate->scene->camera->zoom += .01;
 
         if (state.keyStates[SDL_SCANCODE_F12])
             printf("Framerate: %d\n", framerate);
@@ -241,6 +249,9 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
                 }
             }
         }
+        if ((sleepFor = targetTime - (SDL_GetTicks() - lastFrame)) > 0)
+            SDL_Delay(sleepFor);  //FPS limiter; rests for (16 - time spent) ms per frame, effectively making each frame run for ~16 ms, or 60 FPS
+        lastFrame = SDL_GetTicks();
     }
 
     return state;
