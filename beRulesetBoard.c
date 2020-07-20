@@ -412,15 +412,18 @@ void beDestroyBoardCoSprite(void* ptrBoard)
     }
     board->numPlayers = 0;
 
-    //cleanup cells
+    //cleanup cells and relevant data
     if (board->cellsSize > 0)
     {
         for(int i = 0; i < board->cellsSize; i++)
         {
             free(board->cells[i]);
-            board->cells[i] = NULL;
+            free(board->names[i]);
         }
         free(board->cells);
+        free(board->outlines);
+        free(board->centers);
+        free(board->names);
         board->cells = NULL;
     }
     board->cellsSize = 0;
