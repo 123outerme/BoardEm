@@ -87,7 +87,7 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** 
     board->applyPlayerMovement = applyPlayerMovement;
 }
 
-/** \brief Initializes the Conqueror game board
+/** \brief Initializes the game board from a file
  *
  * \param gamestate beGameState*
  * \param players bePlayer*
@@ -109,7 +109,8 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
     board->ptsSize = calloc(cellCount, sizeof(int));
     board->outlines = calloc(cellCount, sizeof(SDL_Color));
     board->centers = calloc(cellCount, sizeof(cDoublePt));
-    board->names = calloc(cellCount, sizeof(char));
+    board->names = calloc(cellCount, sizeof(char*));
+    board->radii = calloc(cellCount, sizeof(double));
 
     for(int i = 0; i < cellCount; i++)
     {
@@ -131,11 +132,14 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
         }
         board->centers[i].x = strtod(strtok(NULL, "(,) "), NULL);
         board->centers[i].y = strtod(strtok(NULL, "(,) "), NULL);
+        board->radii[i] = strtod(strtok(NULL, "(,) "), NULL);
         char* name = strtok(NULL, "\"-");
         board->names[i] = calloc(strlen(name), sizeof(char));
         strcpy(board->names[i], name);
         board->outlines[i] = (SDL_Color) {strtol(strtok(NULL, "#, "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, "#, "), NULL, 16)};
         //printf("%x, %x, %x, %x\n", board->outlines[i].r, board->outlines[i].g, board->outlines[i].b, board->outlines[i].a);
+
+        //ERR: SEGFAULT on this line
         free(lineData);
         //init center point (potentially)
 
@@ -343,7 +347,7 @@ void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera c
             SDL_RenderDrawLine(global.mainRenderer, (int) cellPoints[i].x, (int) cellPoints[i].y,
                                (int) cellPoints[(i + 1) % ptsSize].x, (int) cellPoints[(i + 1) % ptsSize].y);
 
-            /* temp center point drawing
+            /* temp center point drawing (beCell)
             SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0xFF, 0x00, 0xFF);
             SDL_RenderDrawPoint(global.mainRenderer, cell.center.x * global.windowW / camera.rect.w, cell.center.y * global.windowH / camera.rect.h);
             SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
@@ -376,6 +380,12 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
         /* temp center point drawing
             SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
             SDL_RenderDrawPoint(global.mainRenderer, board->centers[i].x * global.windowW / camera.rect.w, board->centers[i].y * global.windowH / camera.rect.h);
+        //*/
+        /* temp radius drawing
+        SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
+        int deltaDeg = 10;
+        for(int d = 0; d <= 360; d += deltaDeg)
+            SDL_RenderDrawLine(global.mainRenderer, (board->centers[i].x + (board->radii[i] * cos(degToRad(d - deltaDeg)))) * global.windowW / camera.rect.w, (board->centers[i].y + (board->radii[i] * sin(degToRad(d - deltaDeg)))) * global.windowH / camera.rect.h, (board->centers[i].x + (board->radii[i] * cos(degToRad(d)))) * global.windowW / camera.rect.w, (board->centers[i].y + (board->radii[i] * sin(degToRad(d)))) * global.windowH / camera.rect.h);
         //*/
     }
 

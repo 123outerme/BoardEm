@@ -221,6 +221,21 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
         if (state.keyStates[SDL_SCANCODE_C])
             gamestate->scene->camera->zoom += .01;
 
+        //F1 game board refresh
+        if (state.keyStates[SDL_SCANCODE_F1])
+        {
+            int playerCount = gamestate->board->numPlayers;
+            bePlayer* tempPlayers = calloc(playerCount, sizeof(bePlayer));
+            for(int i = 0; i < playerCount; i++)
+                tempPlayers[i] = gamestate->board->players[i];
+
+            beDestroyBoard(gamestate->board);
+
+            beConstructGameBoard(gamestate->board, tempPlayers, playerCount, "Conqueror");
+            free(tempPlayers);
+        }
+
+        //F12 framerate
         if (state.keyStates[SDL_SCANCODE_F12])
             printf("Framerate: %d\n", framerate);
 

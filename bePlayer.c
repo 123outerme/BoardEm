@@ -1,6 +1,18 @@
 #include "bePlayer.h"
 
-
+/** \brief Creates a bePiece
+ *
+ * \param piece bePiece*
+ * \param id int
+ * \param sprite cSprite
+ * \param locationIndex int
+ */
+void beInitPiece(bePiece* piece, int id, cSprite sprite, int locationIndex)
+{
+    piece->id = id;
+    piece->sprite = sprite;
+    piece->locationIndex = locationIndex;
+}
 
 /** \brief Creates a generic player
  *
@@ -22,7 +34,7 @@ void beInitPlayer(bePlayer* player, char* name, bePiece* pieces, int numPieces, 
 
     player->score = 0;
 
-    if (pieces != NULL || numPieces < 1)
+    if (pieces != NULL && numPieces > 0)
     {
         player->pieces = calloc(numPieces, sizeof(bePiece));
         memcpy(player->pieces, pieces, numPieces * sizeof(bePiece));

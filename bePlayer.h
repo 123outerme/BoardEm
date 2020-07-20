@@ -8,6 +8,7 @@ typedef struct _bePiece
 {
     int id;
     cSprite sprite;
+    int locationIndex;
 } bePiece;
 
 typedef struct _bePlayer

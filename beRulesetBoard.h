@@ -25,8 +25,9 @@ typedef struct _beBoard
     //start cells data
     cDoublePt** cells;  /**< A dynamically allocated array of `cDoublePt[]`s that construct the board */
     int cellsSize;  /**< The length of `cells` */
-    int* ptsSize;  /**< The length of each individual cell (variable) */
+    int* ptsSize;  /**< The length of each individual cell */
     cDoublePt* centers;  /**< The centers of each cell */
+    double* radii; /**< The distance from the center from which to further consider a click */
     SDL_Color* outlines;  /**< The outline color for each cell */
     char** names;  /**< The name data for each cell */
     //end cells data
@@ -38,6 +39,7 @@ typedef struct _beBoard
 
 typedef struct _beRuleset
 {
+    int (*gameSetup)(beBoard*, bePlayer*); /**< Outputs the index of which player starts */
     int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState);  /**< Output 1 for quit, 0 for continue */
     void (*updateScores)(beBoard*);
     int (*checkWin)(beBoard*);
