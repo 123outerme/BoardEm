@@ -19,7 +19,6 @@
 int gameLoop(beGameState* gamestate);
 
 cInputState takeTurn(beGameState* gamestate, int playerIndex);
-cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera);
 
 //test functions
 int testTurn(beBoard* board, bePlayer* player, cInputState input);
@@ -129,7 +128,7 @@ int gameLoop(beGameState* gamestate)
     cCamera testCam;
     initCCamera(&testCam, (cDoubleRect) {0, 0, 36, 20}, 1.0, 0.0);
     cScene testScene;
-    initCScene(&testScene, (SDL_Color) {0xFF, 0xFF, 0xFF, 0xFF}, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
+    initCScene(&testScene, gamestate->board->bgColor, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
     gamestate->scene = &testScene;
     startTime = SDL_GetTicks();
 
@@ -188,10 +187,22 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             //store the click coords (in px)
             cDoublePt clickPt = (cDoublePt) {state.click.x, state.click.y};
 
+            //printf("collected click: {%f, %f}\n", clickPt.x, clickPt.y);
+
+            //convert for making new cells and checking clicks on cells
             clickPt = windowCoordToCameraCoord(clickPt, *(gamestate->scene->camera));
 
             printf("click on: {%f, %f}\n", clickPt.x, clickPt.y);
             //printf("click vs window: {%f, %f}\n", state.click.x * gamestate->scene->camera->rect.w / global.windowW, state.click.y * gamestate->scene->camera->rect.h / global.windowH);
+
+            //* check click for clicking on any cells
+            int collidedIndex = beCheckMapClick(gamestate->board, *(gamestate->scene->camera), clickPt);
+
+            if (collidedIndex >= 0)
+                printf("Clicked on %s\n", gamestate->board->names[collidedIndex]);
+            else
+                printf("No click collision\n");
+            //*/
         }
 
         // WASD camera movement
@@ -235,6 +246,15 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             free(tempPlayers);
         }
 
+        //F2 reset zoom, rotation, and offsets
+        if (state.keyStates[SDL_SCANCODE_F2])
+        {
+            gamestate->scene->camera->zoom = 1.0;
+            gamestate->scene->camera->degrees = 0;
+            gamestate->scene->camera->rect.x = 0;
+            gamestate->scene->camera->rect.y = 0;
+        }
+
         //F12 framerate
         if (state.keyStates[SDL_SCANCODE_F12])
             printf("Framerate: %d\n", framerate);
@@ -270,28 +290,6 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
     }
 
     return state;
-}
-
-cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera)
-{
-    //add back the offsets
-    pt.x += (camera.rect.x * global.windowW / camera.rect.w);
-    pt.y += (camera.rect.y * global.windowH / camera.rect.h);
-
-    //rotate the point back around
-    pt = rotatePoint(pt, (cDoublePt) {global.windowW / 2, global.windowH / 2}, -1.0 * camera.degrees);
-
-    //un-zoom the points relative to the center of the window
-    pt.x = (pt.x - global.windowW / 2.0) / camera.zoom + global.windowW / 2.0;
-    pt.y = (pt.y - global.windowH / 2.0) / camera.zoom + global.windowH / 2.0;
-
-
-
-    //convert from px to camera scaling units
-    pt.x *= camera.rect.w / global.windowW;
-    pt.y *= camera.rect.h / global.windowH;
-
-    return pt;
 }
 
 int testTurn(beBoard* board, bePlayer* player, cInputState input)

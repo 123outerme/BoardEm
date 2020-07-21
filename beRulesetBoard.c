@@ -95,11 +95,21 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** 
 void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, char* folderName)
 {
     char* pointsFile = calloc(MAX_PATH, sizeof(char));
-    strcpy(pointsFile, "assets/");
-    strcat(pointsFile, folderName);
-    strcat(pointsFile, "/cells.dat");  //gives us a string that takes us to our cells
+    snprintf(pointsFile, MAX_PATH, "assets/%s/cells.dat", folderName);  //gives us a string that takes us to our cells
 
-    //printf("%s\n", pointsFile);
+    char* infoFile = calloc(MAX_PATH, sizeof(char));
+    snprintf(infoFile, MAX_PATH, "assets/%s/info.dat", folderName);  //gives us a string that takes us to our data
+
+    //read info data
+    board->name = calloc(20, sizeof(char));
+    readLine(infoFile, 0, 20, &(board->name));
+    //printf("%s\n", board->name);
+
+    char* infoData = calloc(50, sizeof(char));
+    readLine(infoFile, 1, 50, &infoData);
+    int r = strtol(strtok(infoData, "#, "), NULL, 16);
+    board->bgColor = (SDL_Color) {r, strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), 0xFF};
+    //printf("{%x, %x, %x, 0xFF}\n", board->bgColor.r, board->bgColor.g, board->bgColor.b);
 
     //* new version (everything stored in board)
     int cellCount = checkFile(pointsFile);
@@ -228,6 +238,132 @@ void beInitRuleset(beRuleset* ruleset,
     ruleset->applyMoneyGameBonus = applyMoneyGameBonus;
 }
 
+/** \brief Checks a click against all cells to determine if a cell was clicked, and which
+ * Expects the click in the camera-relative coordinate system
+ * \param board beBoard*
+ * \param camera cCamera
+ * \param click cDoublePt
+ * \return int - index of cell clicked, or -1 otherwise
+ */
+int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click)
+{
+    int indexesCollided[board->cellsSize];
+    int maxCollided = 0;
+    for(int i = 0; i < board->cellsSize; i++)  //get a sub-list of cells where the click COULD have landed
+    {
+        if (getDistance(click.x, click.y, board->centers[i].x, board->centers[i].y) < board->radii[i])
+            indexesCollided[maxCollided++] = i;
+    }
+
+    int collidedIndex = -1;
+
+    //printf("Found:\n");
+    for(int i = 0; i < maxCollided; i++)  //check each cell previously found with the more accurate but slower check
+    {
+        //printf("%s\n", gamestate->board->names[indexesCollided[i]]);
+        if (beCheckCellClick(board, camera, indexesCollided[i], click))
+        {
+            collidedIndex = indexesCollided[i];
+            break;
+        }
+    }
+    return collidedIndex;
+}
+
+/** \brief Given a click and a cell index, checks if a cell has been clicked on.
+ * Expects the click in the camera-relative coordinate system
+ * \param board beBoard*
+ * \param camera cCamera
+ * \param cellIndex int
+ * \param click cDoublePt
+ * \return bool - true if collided, false otherwise
+ */
+bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt click)
+{ //uses the ray-casting algorithm (found here: https://en.wikipedia.org/wiki/Point_in_polygon)
+    int collisions = 0;
+    click = cameraCoordToWindowCoord(click, camera);
+
+    bool lineTangible[board->ptsSize[cellIndex]];
+    for(int i = 0; i < board->ptsSize[cellIndex]; i++)
+        lineTangible[i] = true;
+
+    for(int rayY = 0; rayY < click.y; rayY += 2)
+    {
+        bool collided = false;
+        for(int i = 0; i < board->ptsSize[cellIndex]; i++)
+        {
+            if (lineTangible[i])
+            {
+                SDL_Rect collisionRay = (SDL_Rect) {.x = click.x, .y = rayY, .w = 1, .h = 2};
+                cDoublePt copy1 = (cDoublePt) {board->cells[cellIndex][i].x, board->cells[cellIndex][i].y},
+                          copy2 = (cDoublePt) {board->cells[cellIndex][(i + 1) % board->ptsSize[cellIndex]].x, board->cells[cellIndex][(i + 1) % board->ptsSize[cellIndex]].y};
+                          //intersect function modifies all data, so copies of the data have to be created
+
+                copy1 = cameraCoordToWindowCoord(copy1, camera);
+                copy2 = cameraCoordToWindowCoord(copy2, camera);
+                int x1 = (int) copy1.x, x2 = (int) copy2.x, y1 = (int) copy1.y, y2 = (int) copy2.y;
+
+                /* debug draw
+                SDL_SetRenderDrawColor(global.mainRenderer, 0, 0, 0, 0xFF);
+                SDL_RenderDrawRect(global.mainRenderer, &collisionRay);
+                SDL_RenderDrawLine(global.mainRenderer, x1, y1, x2, y2);
+                SDL_RenderPresent(global.mainRenderer);
+                //*/
+
+                bool lineCollision = SDL_IntersectRectAndLine(&collisionRay, &x1, &y1, &x2, &y2);
+                if (lineCollision)
+                    lineTangible[i] = false;
+
+                collided = collided | lineCollision;
+            }
+        }
+        if (collided)
+            collisions++;
+    }
+
+    //printf("%d\n", collisions);
+    return (collisions % 2);
+}
+
+cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera)
+{
+    //add back the offsets
+    pt.x += (camera.rect.x * global.windowW / camera.rect.w);
+    pt.y += (camera.rect.y * global.windowH / camera.rect.h);
+
+    //rotate the point back around
+    pt = rotatePoint(pt, (cDoublePt) {global.windowW / 2, global.windowH / 2}, -1.0 * camera.degrees);
+
+    //un-zoom the points relative to the center of the window
+    pt.x = (pt.x - global.windowW / 2.0) / camera.zoom + global.windowW / 2.0;
+    pt.y = (pt.y - global.windowH / 2.0) / camera.zoom + global.windowH / 2.0;
+
+    //convert from px to camera scaling units
+    pt.x *= camera.rect.w / global.windowW;
+    pt.y *= camera.rect.h / global.windowH;
+
+    return pt;
+}
+
+cDoublePt cameraCoordToWindowCoord(cDoublePt pt, cCamera camera)
+{
+    //convert from camera scaling units to px
+    pt.x /= camera.rect.w / global.windowW;
+    pt.y /= camera.rect.h / global.windowH;
+
+    //zoom the points relative to the center of the window
+    pt.x = (pt.x - global.windowW / 2.0) * camera.zoom + global.windowW / 2.0;
+    pt.y = (pt.y - global.windowH / 2.0) * camera.zoom + global.windowH / 2.0;
+
+    //rotate the point around
+    pt = rotatePoint(pt, (cDoublePt) {global.windowW / 2, global.windowH / 2}, camera.degrees);
+
+    //subtract out the offsets
+    pt.x -= (camera.rect.x * global.windowW / camera.rect.w);
+    pt.y -= (camera.rect.y * global.windowH / camera.rect.h);
+
+    return pt;
+}
 
 /** \brief Destroys an allocated beCell.
  *
@@ -432,6 +568,7 @@ void beDestroyBoardCoSprite(void* ptrBoard)
     destroyCSprite(&(board->bgImage));
 
     //cleanup misc
+    board->bgColor = (SDL_Color) {0x00, 0x00, 0x00, 0x00};
     board->width = 0;
     board->height = 0;
     board->applyPlayerMovement = NULL;

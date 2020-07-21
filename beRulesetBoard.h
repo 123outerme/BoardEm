@@ -3,8 +3,11 @@
 
 #include "CoSprite/csGraphics.h"
 #include "CoSprite/csInput.h"
+#include "CoSprite/csUtility.h"
 #include "bePlayer.h"
 #include <stdlib.h>
+
+#define INFO_MAX_LENGTH 2
 
 /*
 typedef struct _beCell
@@ -18,6 +21,7 @@ typedef struct _beCell
 
 typedef struct _beBoard
 {
+    char* name; /**< Name of the board */
     bePlayer* players;  /**< Dynamically allocated array of current players */
     int numPlayers;  /**< Number of players (max 4) */
     void (*applyPlayerMovement)(struct _beBoard*, bePlayer*);  /**< Function that takes in the current board and the player to be moved, checking validity of player movement if local. */
@@ -32,6 +36,7 @@ typedef struct _beBoard
     char** names;  /**< The name data for each cell */
     //end cells data
     cSprite bgImage;  /**< The background image in cSprite form */
+    SDL_Color bgColor; /**< The color the background has */
     int width;  /**< The width (in px) of the board */
     int height;  /**< The height (in px) of the board */
 
@@ -55,7 +60,11 @@ void beInitRuleset(beRuleset* ruleset,
                     int (*checkWin)(beBoard*),
                     void (*applyMoneyGameBonus)(beBoard*));
 
-//function that allows player to select a specific cell (for movement, information, etc.)
+//functions that allows player to select a specific cell (for movement, information, etc.)
+int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click);
+bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt click);
+cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera);
+cDoublePt cameraCoordToWindowCoord(cDoublePt pt, cCamera camera);
 
 //void beDestroyCell(beCell* cell, int ptsSize);
 void beDestroyBoard(beBoard* board);
