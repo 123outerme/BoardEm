@@ -1,6 +1,6 @@
 #include "SnakesLadders.h"
 
-void snakesLaddersMovement(beBoard* board, bePlayer* player)
+void snakesLaddersMovement(bePiece piece, int cellId)
 {
     //TODO
 }

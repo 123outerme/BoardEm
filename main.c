@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
     //initialize ruleset
     beRuleset rules;
-    beInitRuleset(&rules, &testTurn, &testUpdate, &testWinCon, &testBonus);
+    beInitRuleset(&rules, NULL, &testTurn, &testUpdate, &testWinCon, &testBonus, NULL);
 
     //initialize gamestate (needs ruleset + board)
     beGameState gamestate;
@@ -199,7 +199,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             int collidedIndex = beCheckMapClick(gamestate->board, *(gamestate->scene->camera), clickPt);
 
             if (collidedIndex >= 0)
-                printf("Clicked on %s\n", gamestate->board->names[collidedIndex]);
+                printf("Clicked on %s (%d)\n", gamestate->board->names[collidedIndex], collidedIndex);
             else
                 printf("No click collision\n");
             //*/

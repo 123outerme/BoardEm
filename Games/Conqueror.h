@@ -3,6 +3,12 @@
 
 #include "../beRulesetBoard.h"
 
-void conquerorMovement(beBoard* board, bePlayer* player);
+/*
+typedef struct _beConqueror
+{
+    //..
+} beConqueror;
+//*/
+bool conquerorCheckMovement(bePiece piece, int cellId);
 
 #endif // CONQUEROR_H_INCLUDED

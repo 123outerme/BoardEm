@@ -3,6 +3,6 @@
 
 #include "../beRulesetBoard.h"
 
-void corporationMovement(beBoard* board, bePlayer* player);
+void corporationMovement(bePiece piece, int cellId);
 
 #endif // CORPORATIONGAME_H_INCLUDED

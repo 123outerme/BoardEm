@@ -3,6 +3,6 @@
 
 #include "../beRulesetBoard.h"
 
-void snakesLaddersMovement(beBoard* board, bePlayer* player);
+void snakesLaddersMovement(bePiece piece, int cellId);
 
 #endif // CHUTESLADDERS_H_INCLUDED

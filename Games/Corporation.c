@@ -1,6 +1,6 @@
 #include "Corporation.h"
 
-void corporationMovement(beBoard* board, bePlayer* player)
+void corporationMovement(bePiece piece, int cellId)
 {
     //TODO
 }

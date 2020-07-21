@@ -55,7 +55,7 @@ void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, cDoublePt* center, SD
  * \param int h
  * \param void (*applyPlayerMovement)(beBoard*, bePlayer, int))
  */
-void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** cells, int cellsSize, char* bgImgPath, int w, int h, void (*applyPlayerMovement)(beBoard*, bePlayer*))
+void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** cells, int cellsSize, char* bgImgPath, int w, int h, bool (*checkMovement)(bePiece, int))
 {
     board->players = calloc(numPlayers, sizeof(bePlayer));
     memcpy(board->players, players, numPlayers * sizeof(bePlayer));
@@ -84,7 +84,7 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** 
 
     board->width = w;
     board->height = h;
-    board->applyPlayerMovement = applyPlayerMovement;
+    board->checkMovement = checkMovement;
 }
 
 /** \brief Initializes the game board from a file
@@ -149,7 +149,7 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
         board->outlines[i] = (SDL_Color) {strtol(strtok(NULL, "#, "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, "#, "), NULL, 16)};
         //printf("%x, %x, %x, %x\n", board->outlines[i].r, board->outlines[i].g, board->outlines[i].b, board->outlines[i].a);
 
-        //ERR: SEGFAULT on this line
+        //ERROR: SEGFAULT on this line (sometimes)
         free(lineData);
         //init center point (potentially)
 
@@ -226,16 +226,19 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
  * \param int (*checkWin)(beBoard*)
  * \param void (*applyMoneyGameBonus)(beBoard*)
  */
-void beInitRuleset(beRuleset* ruleset,
+void beInitRuleset(beRuleset* ruleset, void* subclass,
                     int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
-                    void (*applyMoneyGameBonus)(beBoard*))
+                    void (*applyMoneyGameBonus)(beBoard*),
+                    void (*freeSubclass)(void*))
 {
+    ruleset->subclass = subclass;
     ruleset->playerTurnFrame = playerTurnFrame;
     ruleset->updateScores = updateScores;
     ruleset->checkWin = checkWin;
     ruleset->applyMoneyGameBonus = applyMoneyGameBonus;
+    ruleset->freeSubclass = freeSubclass;
 }
 
 /** \brief Checks a click against all cells to determine if a cell was clicked, and which
@@ -287,7 +290,7 @@ bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt c
     for(int i = 0; i < board->ptsSize[cellIndex]; i++)
         lineTangible[i] = true;
 
-    for(int rayY = 0; rayY < click.y; rayY += 2)
+    for(int rayY = 0; rayY < click.y; rayY++) //cast a ray heading in the +y direction
     {
         bool collided = false;
         for(int i = 0; i < board->ptsSize[cellIndex]; i++)
@@ -434,7 +437,7 @@ void beDestroyBoard(beBoard* board)
     //cleanup misc
     board->width = 0;
     board->height = 0;
-    board->applyPlayerMovement = NULL;
+    board->checkMovement = NULL;
 }
 
 /** \brief Destroys an allocated beRuleset
@@ -447,6 +450,13 @@ void beDestroyRuleset(beRuleset* ruleset)
     ruleset->updateScores = NULL;
     ruleset->checkWin = NULL;
     ruleset->applyMoneyGameBonus = NULL;
+
+    //subclass stuff
+    if (ruleset->freeSubclass)
+        ruleset->freeSubclass(ruleset->subclass);
+
+    ruleset->freeSubclass = NULL;
+    ruleset->subclass = NULL;
 }
 
 
@@ -571,5 +581,5 @@ void beDestroyBoardCoSprite(void* ptrBoard)
     board->bgColor = (SDL_Color) {0x00, 0x00, 0x00, 0x00};
     board->width = 0;
     board->height = 0;
-    board->applyPlayerMovement = NULL;
+    board->checkMovement = NULL;
 }

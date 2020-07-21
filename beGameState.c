@@ -15,16 +15,15 @@ void beInitGameState(beGameState* gamestate, beRuleset* ruleset, beBoard* board)
     gamestate->onlineState = BE_OFFLINE;
 }
 
-/** \brief Exports the gamestate to JSON format, outputted to `exportedGameState`. Does not export the associated cScene or any keystates.
+/** \brief Exports the turn data to JSON format, outputted to `exportedTurnData`.
  *
  * \param gamestate beGameState*
  * \return char* - the address of `exportedGameState`
  */
-char* beExportGameState(beGameState* gamestate)
+char* beExportTurnData(beGameState* gamestate)
 {
-    gamestate->board->width = -1;
     //TODO
-    return exportedGameState;
+    return exportedTurnData;
 }
 
 /** \brief Destroys a gamestate, cleaning up ALL of its memory.

@@ -24,7 +24,7 @@ typedef struct _beBoard
     char* name; /**< Name of the board */
     bePlayer* players;  /**< Dynamically allocated array of current players */
     int numPlayers;  /**< Number of players (max 4) */
-    void (*applyPlayerMovement)(struct _beBoard*, bePlayer*);  /**< Function that takes in the current board and the player to be moved, checking validity of player movement if local. */
+    bool (*checkMovement)(bePiece, int);  /**< Function that takes in the current board and the player to be moved, checking validity of player movement and applying it if so */
     cResource boardResource;  /**< The CResource that helps us draw the board. */
     //start cells data
     cDoublePt** cells;  /**< A dynamically allocated array of `cDoublePt[]`s that construct the board */
@@ -44,21 +44,24 @@ typedef struct _beBoard
 
 typedef struct _beRuleset
 {
+    void* subclass; /**< The subclass data for the ruleset */
     int (*gameSetup)(beBoard*, bePlayer*); /**< Outputs the index of which player starts */
     int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState);  /**< Output 1 for quit, 0 for continue */
     void (*updateScores)(beBoard*);
-    int (*checkWin)(beBoard*);
+    int (*checkWin)(beBoard*); /**<  */
     void (*applyMoneyGameBonus)(beBoard*);  /**< If landing on "GO" in "Monopoly"-type game, apply this bonus */
+    void (*freeSubclass)(void*); /**< Cleanup function for subclass */
 } beRuleset;
 
 //void beInitCell(beCell* cell, cDoublePt* pts, int cellsSize, cDoublePt* center, SDL_Color outlineColor);
-void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** cells, int cellsSize, char* bgImgPath, int w, int h, void (*applyPlayerMovement)(struct _beBoard*, bePlayer*));
+void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** cells, int cellsSize, char* bgImgPath, int w, int h, bool (*checkMovement)(bePiece, int));
 void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, char* folderName);
-void beInitRuleset(beRuleset* ruleset,
+void beInitRuleset(beRuleset* ruleset, void* subclass,
                     int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
-                    void (*applyMoneyGameBonus)(beBoard*));
+                    void (*applyMoneyGameBonus)(beBoard*),
+                    void (*freeSubclass)(void*));
 
 //functions that allows player to select a specific cell (for movement, information, etc.)
 int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click);

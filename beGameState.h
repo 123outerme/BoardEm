@@ -2,7 +2,6 @@
 #define BEGAMESTATE_H_INCLUDED
 
 #include "beRulesetBoard.h"
-#include "bePlayer.h"
 
 #define BE_OFFLINE 0
 #define BE_PEER 1
@@ -18,10 +17,10 @@ typedef struct _beGameState
 
 void beInitGameState(beGameState* gamestate, beRuleset* ruleset, beBoard* board);
 
-char* beExportGameState(beGameState* gamestate);
+char* beExportTurnData(beGameState* gamestate);
 
 void beDestroyGameState(beGameState* gamestate);
 
-char* exportedGameState;
+char* exportedTurnData; //out here bc returning local pointers is sketchy
 
 #endif // BEGAMESTATE_H_INCLUDED
