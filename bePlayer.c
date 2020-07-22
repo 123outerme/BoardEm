@@ -7,9 +7,9 @@
  * \param sprite cSprite
  * \param locationIndex int
  */
-void beInitPiece(bePiece* piece, int id, cSprite sprite, int locationIndex)
+void beInitPiece(bePiece* piece, int num, cSprite sprite, int locationIndex)
 {
-    piece->id = id;
+    piece->num = num;
     piece->sprite = sprite;
     piece->locationIndex = locationIndex;
 }

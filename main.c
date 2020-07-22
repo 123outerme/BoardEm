@@ -49,6 +49,7 @@ int main(int argc, char* argv[])
         beInitPlayerEmpty(&(players[i]));
         players[i].name = playerNames[i];
     }
+    //initialize test piece
     bePiece testPiece;
     cSprite pieceSprite;
     initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 1, 1}, (cDoubleRect) {0, 0, 24, 24}, NULL, 0.5, SDL_FLIP_NONE, 0, false, NULL, 5);
@@ -58,26 +59,6 @@ int main(int argc, char* argv[])
     //init the correct board
     beBoard board;
     beConstructGameBoard(&board, players, playerCount, "Conqueror");
-
-    /*
-    //initialize cells
-    int pointCount = 3;
-    cDoublePt* points = calloc(pointCount, sizeof(cDoublePt));
-    points[0] = (cDoublePt) {1, 1};
-    points[1] = (cDoublePt) {2, 2};
-    points[2] = (cDoublePt) {2, 1};
-
-    int cellCount = 1;
-    beCell cells[cellCount];
-    {
-        cDoublePt tempCtr = {1.75, 1.33};
-        beInitCell(&(cells[0]), points, 3, &tempCtr, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
-    }
-
-
-    //initialize board (needs players + cells)
-    beInitBoard(&board, players, 2, cells, 1, "./assets/cb.bmp", 20 * 48, 48 * 10, NULL);
-    //*/
 
     //initialize ruleset
     beRuleset rules;
@@ -90,35 +71,11 @@ int main(int argc, char* argv[])
     //start game loop
     gameLoop(&gamestate);
 
-    //de-initialize
-
     //temp pause
     //waitForKey(true);
 
+    //de-initialize
     beDestroyGameState(&gamestate);
-
-    /*
-    //testing cGetInputState
-    bool quit = false;
-    cInputState state;
-    while(!quit)
-    {
-        state = cGetInputState(true);
-        if (state.isClick)
-        {
-            printf("coords (%d, %d)\n", state.click.x, state.click.y);
-            quit = true;
-        }
-        if (state.keyStates[SDL_SCANCODE_F] && state.keyStates[SDL_SCANCODE_G])
-        {
-            printf("printfs in chat fellas\n");
-            quit = true;
-        }
-
-        if (state.quitInput)
-            quit = true;
-    }
-    */
 
     closeCoSprite();
     return 0;
@@ -206,7 +163,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
 
             if (collidedIndex >= 0)
             {
-                printf("Clicked on %s (%d)\n", gamestate->board->names[collidedIndex], collidedIndex);
+                printf("Clicked on %s (%d)\n", gamestate->board->cells[collidedIndex].name, collidedIndex);
                 if (pickedPiece == NULL)
                 {
                     //if you clicked on a board with a piece, set it to pickedPiece

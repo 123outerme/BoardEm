@@ -1,22 +1,29 @@
 #include "beRulesetBoard.h"
 
+
 /** \brief
  *
+ * \param name char*
  * \param cell beCell*
  * \param pts cDoublePt*
  * \param ptsSize int
  * \param neighbors beCell*
  * \param center cDoublePt* - Pass NULL for automatic center (width / 2, height / 2)
+ * \param radius double
  * \param outline SDL_Color
  */
- /*
-void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, cDoublePt* center, SDL_Color outlineColor)
+//*
+void beInitCell(beCell* cell, char* name, cDoublePt* pts, int ptsSize, cDoublePt* center, double radius, SDL_Color outlineColor)
 {
-    // *
+    cell->name = calloc(strlen(name), sizeof(char));
+    strncpy(cell->name, name, strlen(name));
+
+    cell->radius = radius;
+
     //printf("-- %d\n", ptsSize);
     cell->points = calloc(ptsSize, sizeof(cDoublePt));
     memcpy(cell->points, pts, ptsSize * sizeof(cDoublePt));
-    // * /
+
     cell->ptsSize = ptsSize;
 
     if (center == NULL)
@@ -44,6 +51,7 @@ void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, cDoublePt* center, SD
         cell->center = *center;
 
     cell->outlineColor = outlineColor;
+
 }
 //*/
 
@@ -55,7 +63,7 @@ void beInitCell(beCell* cell, cDoublePt* pts, int ptsSize, cDoublePt* center, SD
  * \param int h
  * \param void (*applyPlayerMovement)(beBoard*, bePlayer, int))
  */
-void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** cells, int cellsSize, char* bgImgPath, int w, int h, bool (*checkMovement)(bePiece, int))
+void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, beCell* cells, int cellsSize, char* bgImgPath, int w, int h, bool (*checkMovement)(bePiece, int))
 {
     board->players = calloc(numPlayers, sizeof(bePlayer));
     memcpy(board->players, players, numPlayers * sizeof(bePlayer));
@@ -65,14 +73,23 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, cDoublePt** 
 
     //printf("--%d\n", cellsSize);
 
-    board->cells = calloc(cellsSize, sizeof(cDoublePt*));
-    for(int i = 0; i < cellsSize; i++)
+    if (cells != NULL && cellsSize > 0)
     {
-        board->cells[i] = cells[i];
-        //printf("-%d\n", i);
+        board->cells = calloc(cellsSize, sizeof(beCell));
+        for(int i = 0; i < cellsSize; i++)
+        {
+            board->cells[i] = cells[i];
+            //printf("-%d\n", i);
+        }
+        //memcpy(board->cells, cells, cellsSize * sizeof(beCell));
+        board->cellsSize = cellsSize;
     }
-    //memcpy(board->cells, cells, cellsSize * sizeof(beCell));
-    board->cellsSize = cellsSize;
+    else
+    {
+        board->cellsSize = 0;
+        board->cells = NULL;
+    }
+
 
     SDL_Texture* bgTexture;
     loadIMG(bgImgPath, &bgTexture);
@@ -113,14 +130,10 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
 
     //* new version (everything stored in board)
     int cellCount = checkFile(pointsFile);
-    cDoublePt* cells[cellCount];
-    //printf("%d\n", cellCount);
 
-    board->ptsSize = calloc(cellCount, sizeof(int));
-    board->outlines = calloc(cellCount, sizeof(SDL_Color));
-    board->centers = calloc(cellCount, sizeof(cDoublePt));
-    board->names = calloc(cellCount, sizeof(char*));
-    board->radii = calloc(cellCount, sizeof(double));
+    beCell* cells = calloc(cellCount, sizeof(beCell));
+
+    //printf("%d\n", cellCount);
 
     for(int i = 0; i < cellCount; i++)
     {
@@ -129,24 +142,26 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
         //printf("%s\n", lineData);
 
         int pointCount = strtol(strtok(lineData, "[]"), NULL, 10);
-        board->ptsSize[i] = pointCount;
+        cells[i].ptsSize = pointCount;
         //board->outlines[i] = (SDL_Color) {0xFF, 0x00, 0x00, 0xFF};
         //printf("%d\n", pointCount);
-        cells[i] = calloc(pointCount, sizeof(cDoublePt));
+        //cells[i] = calloc(pointCount, sizeof(cDoublePt));
+
+        cells[i].points = calloc(pointCount, sizeof(cDoublePt));
 
         for(int j = 0; j < pointCount; j++)
         {
-            cells[i][j].x = strtod(strtok(NULL, "{,} "), NULL);
-            cells[i][j].y = strtod(strtok(NULL, "{,} "), NULL);
-            //printf("%f, %f\n", points[j].x, points[j].y);
+            cells[i].points[j].x = strtod(strtok(NULL, "{,} "), NULL);
+            cells[i].points[j].y = strtod(strtok(NULL, "{,} "), NULL);
+            //printf("%f, %f\n", board->cells[i].points[j].x, board->cells[i].points[j].y);
         }
-        board->centers[i].x = strtod(strtok(NULL, "(,) "), NULL);
-        board->centers[i].y = strtod(strtok(NULL, "(,) "), NULL);
-        board->radii[i] = strtod(strtok(NULL, "(,) "), NULL);
+        cells[i].center.x = strtod(strtok(NULL, "(,) "), NULL);
+        cells[i].center.y = strtod(strtok(NULL, "(,) "), NULL);
+        cells[i].radius = strtod(strtok(NULL, "(,) "), NULL);
         char* name = strtok(NULL, "\"-");
-        board->names[i] = calloc(strlen(name), sizeof(char));
-        strcpy(board->names[i], name);
-        board->outlines[i] = (SDL_Color) {strtol(strtok(NULL, "#, "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, "#, "), NULL, 16)};
+        cells[i].name = calloc(strlen(name), sizeof(char));
+        strncpy(cells[i].name, name, strlen(name));
+        cells[i].outlineColor = (SDL_Color) {strtol(strtok(NULL, "#, "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, ", "), NULL, 16), strtol(strtok(NULL, "#, "), NULL, 16)};
         //printf("%x, %x, %x, %x\n", board->outlines[i].r, board->outlines[i].g, board->outlines[i].b, board->outlines[i].a);
 
         //ERROR: SEGFAULT on this line (sometimes)
@@ -156,58 +171,8 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
         //init neighbors list (line num)
     }
     free(pointsFile);
-    //*/
-
-    /* old version (beCells)
-    int cellCount = checkFile(pointsFile);
-    beCell cells[cellCount];
-    //printf("%d\n", cellCount);
-
-    for(int i = 0; i < cellCount; i++)
-    {
-        char* lineData = calloc(2048, sizeof(char));
-        readLine(pointsFile, i, 2048, &lineData);
-        //printf("%s\n", lineData);
-
-        int pointCount = strtol(strtok(lineData, "[]"), NULL, 10);
-        //printf("%d\n", pointCount);
-        cDoublePt* points = calloc(pointCount, sizeof(cDoublePt));
-
-        for(int j = 0; j < pointCount; j++)
-        {
-            points[j].x = strtod(strtok(NULL, "{,} "), NULL);
-            points[j].y = strtod(strtok(NULL, "{,} "), NULL);
-            //printf("%f, %f\n", points[j].x, points[j].y);
-        }
-        free(lineData);
-        //init center point (potentially)
-
-        //init neighbors list (line num)
-
-        beInitCell(&(cells[i]), points, pointCount, NULL, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
-        free(points);
-    }
-    free(pointsFile);
-    //*/
-
-    /* direct allocation
-    int cellCount = 4;
-    beCell cells[cellCount];
-    {
-        cDoublePt pts[4] = {(cDoublePt) {7.0875, 8.333333}, (cDoublePt) {6.1125, 10.291667}, (cDoublePt) {4.275, 9.958333}, (cDoublePt) {4.3875, 8.291667}};
-        cDoublePt pts2[8] = {(cDoublePt) {7.0875, 8.333333}, (cDoublePt) {8.362500, 8.708333}, (cDoublePt) {8.4375, 9.125}, (cDoublePt) {9.825, 8.5}, (cDoublePt) {10.05, 8.833333}, (cDoublePt) {8.737500, 10.875000}, (cDoublePt) {6.937500, 10.833333}, (cDoublePt) {6.1125, 10.291667}};
-        cDoublePt pts3[7] = {(cDoublePt) {2.6625, 6.958333}, (cDoublePt) {2.6625, 5.416667}, (cDoublePt) {1.1625, 5.041667}, (cDoublePt) {0.1875, 5.541667}, (cDoublePt) {0.225000, 6.833333}, (cDoublePt) {1.162500, 7.291667}, (cDoublePt) {1.612500, 6.708333}};
-        cDoublePt pts4[5] = {(cDoublePt) {2.6625, 5.416667}, (cDoublePt) {7.3125, 5.125}, (cDoublePt) {8.625, 6.25}, (cDoublePt) {7.275, 6.875000}, (cDoublePt) {2.7, 6.416667}};
-
-        beInitCell(&(cells[0]), (cDoublePt*) pts, 4, NULL, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
-        beInitCell(&(cells[1]), (cDoublePt*) pts2, 8, NULL, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
-        beInitCell(&(cells[2]), (cDoublePt*) pts3, 7, NULL, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
-        beInitCell(&(cells[3]), (cDoublePt*) pts4, 5, NULL, (SDL_Color) {0xFF, 0x00, 0x00, 0xFF});
-    }
-    //*/
 
     //initialize board (needs players + cells)
-
     char* mapImgPath = calloc(MAX_PATH, sizeof(char));
     strcpy(mapImgPath, "assets/");
     strcat(mapImgPath, folderName);
@@ -258,7 +223,7 @@ int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click)
     int maxCollided = 0;
     for(int i = 0; i < board->cellsSize; i++)  //get a sub-list of cells where the click COULD have landed
     {
-        if (getDistance(click.x, click.y, board->centers[i].x, board->centers[i].y) < board->radii[i])
+        if (getDistance(click.x, click.y, board->cells[i].center.x, board->cells[i].center.y) < board->cells[i].radius)
             indexesCollided[maxCollided++] = i;
     }
 
@@ -268,7 +233,7 @@ int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click)
     for(int i = 0; i < maxCollided; i++)  //check each cell previously found with the more accurate but slower check
     {
         //printf("%s\n", gamestate->board->names[indexesCollided[i]]);
-        if (beCheckCellClick(board, camera, indexesCollided[i], click))
+        if (beCheckCellClick(board->cells[indexesCollided[i]], click, camera))
         {
             collidedIndex = indexesCollided[i];
             break;
@@ -277,21 +242,20 @@ int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click)
     return collidedIndex;
 }
 
-/** \brief Given a click and a cell index, checks if a cell has been clicked on.
+/** \brief Checks if a specific cell has been clicked on.
  * Expects the click in the camera-relative coordinate system
- * \param board beBoard*
- * \param camera cCamera
- * \param cellIndex int
+ * \param cell beCell
  * \param click cDoublePt
+ * \param camera cCamera
  * \return bool - true if collided, false otherwise
  */
-bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt click)
+bool beCheckCellClick(beCell cell, cDoublePt click, cCamera camera)
 { //uses the ray-casting algorithm (found here: https://en.wikipedia.org/wiki/Point_in_polygon)
     int collisions = 0;
     click = cCameraCoordToWindowCoord(click, camera);
 
-    bool lineTangible[board->ptsSize[cellIndex]];
-    for(int i = 0; i < board->ptsSize[cellIndex]; i++)
+    bool lineTangible[cell.ptsSize];
+    for(int i = 0; i < cell.ptsSize; i++)
         lineTangible[i] = true;
 
     cDoublePt boardOriginPt = {0, 0};
@@ -300,13 +264,13 @@ bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt c
     for(int rayY = boardOriginPt.y; rayY < click.y; rayY++) //cast a ray heading from the top of the board in the +y direction
     {
         bool collided = false;
-        for(int i = 0; i < board->ptsSize[cellIndex]; i++)
+        for(int i = 0; i < cell.ptsSize; i++)
         {
             if (lineTangible[i])
             {
                 SDL_Rect collisionRay = (SDL_Rect) {.x = click.x, .y = rayY, .w = 1, .h = 2};
-                cDoublePt copy1 = (cDoublePt) {board->cells[cellIndex][i].x, board->cells[cellIndex][i].y},
-                          copy2 = (cDoublePt) {board->cells[cellIndex][(i + 1) % board->ptsSize[cellIndex]].x, board->cells[cellIndex][(i + 1) % board->ptsSize[cellIndex]].y};
+                cDoublePt copy1 = (cDoublePt) {cell.points[i].x, cell.points[i].y},
+                          copy2 = (cDoublePt) {cell.points[(i + 1) % cell.ptsSize].x, cell.points[(i + 1) % cell.ptsSize].y};
                           //intersect function modifies all data, so copies of the data have to be created
 
                 copy1 = cCameraCoordToWindowCoord(copy1, camera);
@@ -339,8 +303,8 @@ bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt c
  *
  * \param cell beCell*
  */
-/*
-void beDestroyCell(beCell* cell, int ptsSize)
+//*
+void beDestroyCell(beCell* cell)
 {
     //set all points to 0
     for(int i = 0; i < cell->ptsSize; i++)
@@ -355,6 +319,9 @@ void beDestroyCell(beCell* cell, int ptsSize)
     cell->ptsSize = 0;
 
     //misc cleanup
+    free(cell->name);
+    cell->name = NULL;
+    cell->radius = 0;
     cell->center = (cDoublePt) {0,0};
     cell->outlineColor = (SDL_Color) {0,0,0,0};
 
@@ -387,13 +354,9 @@ void beDestroyBoard(beBoard* board)
     {
         for(int i = 0; i < board->cellsSize; i++)
         {
-            free(board->cells[i]);
-            free(board->names[i]);
+            beDestroyCell(&(board->cells[i]));
         }
         free(board->cells);
-        free(board->outlines);
-        free(board->centers);
-        free(board->names);
         board->cells = NULL;
     }
     board->cellsSize = 0;
@@ -432,18 +395,18 @@ void beDestroyRuleset(beRuleset* ruleset)
  * \param cell beCell
  * \param camera cCamera
  */
-void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera camera)
+void beDrawCellCoSprite(beCell cell, cCamera camera)
 {
     //set the per-cell draw color
-    SDL_SetRenderDrawColor(global.mainRenderer, color.r, color.g, color.b, color.a);
+    SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
 
-    cDoublePt cellPoints[ptsSize];
+    cDoublePt cellPoints[cell.ptsSize];
 
     //printf("testing draw cell - %d\n", board->cells[i].ptsSize);
 
-    for(int i = 0; i < ptsSize; i++)
+    for(int i = 0; i < cell.ptsSize; i++)
     {
-        cellPoints[i] = (cDoublePt) {cell[i].x * global.windowW / camera.rect.w, cell[i].y * global.windowH / camera.rect.h};
+        cellPoints[i] = (cDoublePt) {cell.points[i].x * global.windowW / camera.rect.w, cell.points[i].y * global.windowH / camera.rect.h};
 
         //scale the points relative to the center of the window
         cellPoints[i].x = (cellPoints[i].x - global.windowW / 2.0) * camera.zoom + global.windowW / 2.0;
@@ -454,16 +417,22 @@ void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera c
         cellPoints[i].x -= (camera.rect.x * global.windowW / camera.rect.w);
         cellPoints[i].y -= (camera.rect.y * global.windowH / camera.rect.h);
     }
-    for(int i = 0; i < ptsSize; i++)
+    for(int i = 0; i < cell.ptsSize; i++)
     {
         //draw a line between the ith point and the ((i + 1) % ptsSize)th point
         SDL_RenderDrawLine(global.mainRenderer, (int) cellPoints[i].x, (int) cellPoints[i].y,
-                           (int) cellPoints[(i + 1) % ptsSize].x, (int) cellPoints[(i + 1) % ptsSize].y);
+                           (int) cellPoints[(i + 1) % cell.ptsSize].x, (int) cellPoints[(i + 1) % cell.ptsSize].y);
 
-        /* temp center point drawing (beCell)
-        SDL_SetR+enderDrawColor(global.mainRenderer, 0x00, 0xFF, 0x00, 0xFF);
+        /* debug center point drawing
+        SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderDrawPoint(global.mainRenderer, cell.center.x * global.windowW / camera.rect.w, cell.center.y * global.windowH / camera.rect.h);
         SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
+        //*/
+        /* debug radius drawing
+        SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
+        int deltaDeg = 10;
+        for(int d = 0; d <= 360; d += deltaDeg)
+            SDL_RenderDrawLine(global.mainRenderer, (cell.center.x + (cell.radius * cos(degToRad(d - deltaDeg)))) * global.windowW / camera.rect.w, (cell.center.y + (cell.radius * sin(degToRad(d - deltaDeg)))) * global.windowH / camera.rect.h, (cell.center.x + (cell.radius * cos(degToRad(d)))) * global.windowW / camera.rect.w, (cell.center.y + (cell.radius * sin(degToRad(d)))) * global.windowH / camera.rect.h);
         //*/
     }
 }
@@ -474,10 +443,10 @@ void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera c
  * \param cellCenterPts cDoublePt*
  * \param camera cCamera
  */
-void beDrawPieceCoSprite(bePiece piece, cDoublePt* cellCenterPts, cCamera camera)
+void beDrawPieceCoSprite(bePiece piece, cDoublePt cellCenterPt, cCamera camera)
 {
-    piece.sprite.drawRect.x = cellCenterPts[piece.locationIndex].x - piece.sprite.drawRect.w * piece.sprite.scale / 2;
-    piece.sprite.drawRect.y = cellCenterPts[piece.locationIndex].y - piece.sprite.drawRect.h * piece.sprite.scale / 2;
+    piece.sprite.drawRect.x = cellCenterPt.x - piece.sprite.drawRect.w * piece.sprite.scale / 2;
+    piece.sprite.drawRect.y = cellCenterPt.y - piece.sprite.drawRect.h * piece.sprite.scale / 2;
 
     drawCSprite(piece.sprite, camera, false, false);
 }
@@ -501,19 +470,9 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
 
     //draw cells
     for(int i = 0; i < board->cellsSize; i++)
-    {
-        beDrawCellCoSprite(board->cells[i], board->ptsSize[i], board->outlines[i], camera);
-        /* temp center point drawing
-            SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
-            SDL_RenderDrawPoint(global.mainRenderer, board->centers[i].x * global.windowW / camera.rect.w, board->centers[i].y * global.windowH / camera.rect.h);
-        //*/
-        /* temp radius drawing
-        SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0x00, 0x00, 0xFF);
-        int deltaDeg = 10;
-        for(int d = 0; d <= 360; d += deltaDeg)
-            SDL_RenderDrawLine(global.mainRenderer, (board->centers[i].x + (board->radii[i] * cos(degToRad(d - deltaDeg)))) * global.windowW / camera.rect.w, (board->centers[i].y + (board->radii[i] * sin(degToRad(d - deltaDeg)))) * global.windowH / camera.rect.h, (board->centers[i].x + (board->radii[i] * cos(degToRad(d)))) * global.windowW / camera.rect.w, (board->centers[i].y + (board->radii[i] * sin(degToRad(d)))) * global.windowH / camera.rect.h);
-        //*/
-    }
+        beDrawCellCoSprite(board->cells[i], camera);
+
+    //draw player stuff
     for(int i = 0; i < board->numPlayers; i++)
     {  //for each player
         for(int priority = 0; priority <= global.renderLayers; priority++)
@@ -521,7 +480,7 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
             for(int x = 0; x < board->players[i].numPieces; x++)
             {  //draw each piece
                 if (priority == board->players[i].pieces[x].sprite.renderLayer)
-                    beDrawPieceCoSprite(board->players[i].pieces[x], board->centers, camera);
+                    beDrawPieceCoSprite(board->players[i].pieces[x], board->cells[board->players[i].pieces[x].locationIndex].center, camera);
             }
         }
     }
@@ -553,13 +512,14 @@ void beDestroyBoardCoSprite(void* ptrBoard)
     {
         for(int i = 0; i < board->cellsSize; i++)
         {
-            free(board->cells[i]);
-            free(board->names[i]);
+            beDestroyCell(&(board->cells[i]));
+            //free(board->cells[i]);
+            //free(board->names[i]);
         }
         free(board->cells);
-        free(board->outlines);
-        free(board->centers);
-        free(board->names);
+        //free(board->outlines);
+        //free(board->centers);
+        //free(board->names);
         board->cells = NULL;
     }
     board->cellsSize = 0;
