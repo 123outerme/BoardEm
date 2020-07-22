@@ -217,7 +217,7 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
     if (strcmp(folderName, "Conqueror") == 0)
         checkMovement = &(conquerorCheckMovement);
 
-    beInitBoard(board, players, playerCount, cells, cellCount, mapImgPath, 20 * 48, 48 * 10, checkMovement);
+    beInitBoard(board, players, playerCount, cells, cellCount, mapImgPath, 36, 20, checkMovement);
     free(mapImgPath);
     //free(cells);
 }
@@ -288,7 +288,7 @@ int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click)
 bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt click)
 { //uses the ray-casting algorithm (found here: https://en.wikipedia.org/wiki/Point_in_polygon)
     int collisions = 0;
-    click = cameraCoordToWindowCoord(click, camera);
+    click = cCameraCoordToWindowCoord(click, camera);
 
     bool lineTangible[board->ptsSize[cellIndex]];
     for(int i = 0; i < board->ptsSize[cellIndex]; i++)
@@ -306,8 +306,8 @@ bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt c
                           copy2 = (cDoublePt) {board->cells[cellIndex][(i + 1) % board->ptsSize[cellIndex]].x, board->cells[cellIndex][(i + 1) % board->ptsSize[cellIndex]].y};
                           //intersect function modifies all data, so copies of the data have to be created
 
-                copy1 = cameraCoordToWindowCoord(copy1, camera);
-                copy2 = cameraCoordToWindowCoord(copy2, camera);
+                copy1 = cCameraCoordToWindowCoord(copy1, camera);
+                copy2 = cCameraCoordToWindowCoord(copy2, camera);
                 int x1 = (int) copy1.x, x2 = (int) copy2.x, y1 = (int) copy1.y, y2 = (int) copy2.y;
 
                 /* debug draw
@@ -330,46 +330,6 @@ bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt c
 
     //printf("%d\n", collisions);
     return (collisions % 2);
-}
-
-cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera)
-{
-    //add back the offsets
-    pt.x += (camera.rect.x * global.windowW / camera.rect.w);
-    pt.y += (camera.rect.y * global.windowH / camera.rect.h);
-
-    //rotate the point back around
-    pt = rotatePoint(pt, (cDoublePt) {global.windowW / 2, global.windowH / 2}, -1.0 * camera.degrees);
-
-    //un-zoom the points relative to the center of the window
-    pt.x = (pt.x - global.windowW / 2.0) / camera.zoom + global.windowW / 2.0;
-    pt.y = (pt.y - global.windowH / 2.0) / camera.zoom + global.windowH / 2.0;
-
-    //convert from px to camera scaling units
-    pt.x *= camera.rect.w / global.windowW;
-    pt.y *= camera.rect.h / global.windowH;
-
-    return pt;
-}
-
-cDoublePt cameraCoordToWindowCoord(cDoublePt pt, cCamera camera)
-{
-    //convert from camera scaling units to px
-    pt.x /= camera.rect.w / global.windowW;
-    pt.y /= camera.rect.h / global.windowH;
-
-    //zoom the points relative to the center of the window
-    pt.x = (pt.x - global.windowW / 2.0) * camera.zoom + global.windowW / 2.0;
-    pt.y = (pt.y - global.windowH / 2.0) * camera.zoom + global.windowH / 2.0;
-
-    //rotate the point around
-    pt = rotatePoint(pt, (cDoublePt) {global.windowW / 2, global.windowH / 2}, camera.degrees);
-
-    //subtract out the offsets
-    pt.x -= (camera.rect.x * global.windowW / camera.rect.w);
-    pt.y -= (camera.rect.y * global.windowH / camera.rect.h);
-
-    return pt;
 }
 
 /** \brief Destroys an allocated beCell.
@@ -507,13 +467,9 @@ void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera c
 
 void beDrawPieceCoSprite(bePiece piece, cDoublePt* cellCenterPts, cCamera camera)
 {
-    cDoublePt drawPoint = cameraCoordToWindowCoord(cellCenterPts[piece.locationIndex], camera);
+    piece.sprite.drawRect.x = cellCenterPts[piece.locationIndex].x - piece.sprite.drawRect.w / 2;
+    piece.sprite.drawRect.y = cellCenterPts[piece.locationIndex].y - piece.sprite.drawRect.h / 2;
 
-    piece.sprite.drawRect.x = drawPoint.x - piece.sprite.drawRect.w / 2;
-    piece.sprite.drawRect.y = drawPoint.y - piece.sprite.drawRect.h / 2;
-
-    //I don't know why this won't take in camera coords and auto-convert them to draw, it should be doing that
-    //but until then, I have to convert them manually
     drawCSprite(piece.sprite, camera, false, false);
 }
 
@@ -551,9 +507,13 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
     }
     for(int i = 0; i < board->numPlayers; i++)
     {  //for each player
-        for(int x = 0; x < board->players[i].numPieces; x++)
-        {  //draw each piece
-            beDrawPieceCoSprite(board->players[i].pieces[x], board->centers, camera);
+        for(int priority = 0; priority <= global.renderLayers; priority++)
+        { //for each layer
+            for(int x = 0; x < board->players[i].numPieces; x++)
+            {  //draw each piece
+                if (priority == board->players[i].pieces[x].sprite.renderLayer)
+                    beDrawPieceCoSprite(board->players[i].pieces[x], board->centers, camera);
+            }
         }
     }
     //reset draw color

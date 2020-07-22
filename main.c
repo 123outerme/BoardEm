@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     }
     bePiece testPiece;
     cSprite pieceSprite;
-    initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 24, 24}, (cDoubleRect) {0, 0, 24, 24}, NULL, 1.0, SDL_FLIP_NONE, 0, false, NULL, 5);
+    initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 1, 1}, (cDoubleRect) {0, 0, 24, 24}, NULL, 1.0, SDL_FLIP_NONE, 0, false, NULL, 5);
     beInitPiece(&testPiece, 0, pieceSprite, 0);
     beInitPlayer(&(players[0]), playerNames[0], &testPiece, 1, true, false, true, NULL, NULL);
 
@@ -196,7 +196,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             //printf("collected click: {%f, %f}\n", clickPt.x, clickPt.y);
 
             //convert for making new cells and checking clicks on cells
-            clickPt = windowCoordToCameraCoord(clickPt, *(gamestate->scene->camera));
+            clickPt = cWindowCoordToCameraCoord(clickPt, *(gamestate->scene->camera));
 
             //printf("click on: {%f, %f}\n", clickPt.x, clickPt.y);
             //printf("click vs window: {%f, %f}\n", state.click.x * gamestate->scene->camera->rect.w / global.windowW, state.click.y * gamestate->scene->camera->rect.h / global.windowH);

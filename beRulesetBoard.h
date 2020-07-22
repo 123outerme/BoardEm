@@ -67,8 +67,6 @@ void beInitRuleset(beRuleset* ruleset, void* subclass,
 //functions that allows player to select a specific cell (for movement, information, etc.)
 int beCheckMapClick(beBoard* board, cCamera camera, cDoublePt click);
 bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt click);
-cDoublePt windowCoordToCameraCoord(cDoublePt pt, cCamera camera);
-cDoublePt cameraCoordToWindowCoord(cDoublePt pt, cCamera camera);
 
 //void beDestroyCell(beCell* cell, int ptsSize);
 void beDestroyBoard(beBoard* board);
