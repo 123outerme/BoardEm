@@ -24,6 +24,7 @@ typedef struct _bePlayer
     void (*freeSubclass)(void*);  /**< Function that can be used in beDestroyPlayer to free the subclass data */
 } bePlayer;
 
+void beInitPiece(bePiece* piece, int id, cSprite sprite, int locationIndex);
 void beInitPlayer(bePlayer* player, char* name, bePiece* pieces, int numPieces, bool isLocal, bool isAI, bool active, void* subclass, void (*freeSubclass)(void*));
 void beInitPlayerEmpty(bePlayer* player);
 void beInitPlayerHuman(bePlayer* player, char* name, bePiece* pieces, int numPieces, bool isLocal, void* subclass, void (*freeSubclass)(void*));

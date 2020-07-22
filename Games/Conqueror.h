@@ -1,7 +1,7 @@
 #ifndef CONQUEROR_H_INCLUDED
 #define CONQUEROR_H_INCLUDED
 
-#include "../beRulesetBoard.h"
+#include "../bePlayer.h"
 
 /*
 typedef struct _beConqueror

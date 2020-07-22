@@ -213,7 +213,11 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
     strcat(mapImgPath, folderName);
     strcat(mapImgPath, "/map.png");
 
-    beInitBoard(board, players, playerCount, cells, cellCount, mapImgPath, 20 * 48, 48 * 10, NULL);
+    bool (*checkMovement)(bePiece, int) = NULL;
+    if (strcmp(folderName, "Conqueror") == 0)
+        checkMovement = &(conquerorCheckMovement);
+
+    beInitBoard(board, players, playerCount, cells, cellCount, mapImgPath, 20 * 48, 48 * 10, checkMovement);
     free(mapImgPath);
     //free(cells);
 }
@@ -459,7 +463,7 @@ void beDestroyRuleset(beRuleset* ruleset)
     ruleset->subclass = NULL;
 }
 
-
+//Function pointer "targets"
 /** \brief Helper function for board drawing (CoSprite use only)
  *
  * \param cell beCell
@@ -475,33 +479,44 @@ void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera c
     //printf("testing draw cell - %d\n", board->cells[i].ptsSize);
 
     for(int i = 0; i < ptsSize; i++)
-        {
-            cellPoints[i] = (cDoublePt) {cell[i].x * global.windowW / camera.rect.w, cell[i].y * global.windowH / camera.rect.h};
+    {
+        cellPoints[i] = (cDoublePt) {cell[i].x * global.windowW / camera.rect.w, cell[i].y * global.windowH / camera.rect.h};
 
-            //scale the points relative to the center of the window
-            cellPoints[i].x = (cellPoints[i].x - global.windowW / 2.0) * camera.zoom + global.windowW / 2.0;
-            cellPoints[i].y = (cellPoints[i].y - global.windowH / 2.0) * camera.zoom + global.windowH / 2.0;
+        //scale the points relative to the center of the window
+        cellPoints[i].x = (cellPoints[i].x - global.windowW / 2.0) * camera.zoom + global.windowW / 2.0;
+        cellPoints[i].y = (cellPoints[i].y - global.windowH / 2.0) * camera.zoom + global.windowH / 2.0;
 
-            //if board isn't fixed do these three lines. The board is never set to be fixed though
-            cellPoints[i] = rotatePoint(cellPoints[i], (cDoublePt) {global.windowW / 2, global.windowH / 2}, camera.degrees);
-            cellPoints[i].x -= (camera.rect.x * global.windowW / camera.rect.w);
-            cellPoints[i].y -= (camera.rect.y * global.windowH / camera.rect.h);
-        }
-        for(int i = 0; i < ptsSize; i++)
-        {
-            //draw a line between the ith point and the ((i + 1) % ptsSize)th point
-            SDL_RenderDrawLine(global.mainRenderer, (int) cellPoints[i].x, (int) cellPoints[i].y,
-                               (int) cellPoints[(i + 1) % ptsSize].x, (int) cellPoints[(i + 1) % ptsSize].y);
+        //if board isn't fixed do these three lines. The board is never set to be fixed though
+        cellPoints[i] = rotatePoint(cellPoints[i], (cDoublePt) {global.windowW / 2, global.windowH / 2}, camera.degrees);
+        cellPoints[i].x -= (camera.rect.x * global.windowW / camera.rect.w);
+        cellPoints[i].y -= (camera.rect.y * global.windowH / camera.rect.h);
+    }
+    for(int i = 0; i < ptsSize; i++)
+    {
+        //draw a line between the ith point and the ((i + 1) % ptsSize)th point
+        SDL_RenderDrawLine(global.mainRenderer, (int) cellPoints[i].x, (int) cellPoints[i].y,
+                           (int) cellPoints[(i + 1) % ptsSize].x, (int) cellPoints[(i + 1) % ptsSize].y);
 
-            /* temp center point drawing (beCell)
-            SDL_SetRenderDrawColor(global.mainRenderer, 0x00, 0xFF, 0x00, 0xFF);
-            SDL_RenderDrawPoint(global.mainRenderer, cell.center.x * global.windowW / camera.rect.w, cell.center.y * global.windowH / camera.rect.h);
-            SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
-            //*/
-        }
+        /* temp center point drawing (beCell)
+        SDL_SetR+enderDrawColor(global.mainRenderer, 0x00, 0xFF, 0x00, 0xFF);
+        SDL_RenderDrawPoint(global.mainRenderer, cell.center.x * global.windowW / camera.rect.w, cell.center.y * global.windowH / camera.rect.h);
+        SDL_SetRenderDrawColor(global.mainRenderer, cell.outlineColor.r, cell.outlineColor.g, cell.outlineColor.b, cell.outlineColor.a);
+        //*/
+    }
 }
 
-//Function pointer "targets"
+void beDrawPieceCoSprite(bePiece piece, cDoublePt* cellCenterPts, cCamera camera)
+{
+    cDoublePt drawPoint = cameraCoordToWindowCoord(cellCenterPts[piece.locationIndex], camera);
+
+    piece.sprite.drawRect.x = drawPoint.x - piece.sprite.drawRect.w / 2;
+    piece.sprite.drawRect.y = drawPoint.y - piece.sprite.drawRect.h / 2;
+
+    //I don't know why this won't take in camera coords and auto-convert them to draw, it should be doing that
+    //but until then, I have to convert them manually
+    drawCSprite(piece.sprite, camera, false, false);
+}
+
 /** \brief CoSprite funct ptr use only. Draws the beBoard.
  *
  * \param ptrBoard void*
@@ -534,7 +549,13 @@ void beDrawBoardCoSprite(void* ptrBoard, cCamera camera)
             SDL_RenderDrawLine(global.mainRenderer, (board->centers[i].x + (board->radii[i] * cos(degToRad(d - deltaDeg)))) * global.windowW / camera.rect.w, (board->centers[i].y + (board->radii[i] * sin(degToRad(d - deltaDeg)))) * global.windowH / camera.rect.h, (board->centers[i].x + (board->radii[i] * cos(degToRad(d)))) * global.windowW / camera.rect.w, (board->centers[i].y + (board->radii[i] * sin(degToRad(d)))) * global.windowH / camera.rect.h);
         //*/
     }
-
+    for(int i = 0; i < board->numPlayers; i++)
+    {  //for each player
+        for(int x = 0; x < board->players[i].numPieces; x++)
+        {  //draw each piece
+            beDrawPieceCoSprite(board->players[i].pieces[x], board->centers, camera);
+        }
+    }
     //reset draw color
     SDL_SetRenderDrawColor(global.mainRenderer, prevR, prevG, prevB, prevA);
 }

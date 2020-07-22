@@ -44,11 +44,16 @@ int main(int argc, char* argv[])
     int playerCount = 2;
     bePlayer players[playerCount];
     char* playerNames[2] = {"One", "Two"};
-    for(int i = 0; i < playerCount; i++)
+    for(int i = 1; i < playerCount; i++)
     {
         beInitPlayerEmpty(&(players[i]));
         players[i].name = playerNames[i];
     }
+    bePiece testPiece;
+    cSprite pieceSprite;
+    initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 24, 24}, (cDoubleRect) {0, 0, 24, 24}, NULL, 1.0, SDL_FLIP_NONE, 0, false, NULL, 5);
+    beInitPiece(&testPiece, 0, pieceSprite, 0);
+    beInitPlayer(&(players[0]), playerNames[0], &testPiece, 1, true, false, true, NULL, NULL);
 
     //init the correct board
     beBoard board;
@@ -171,6 +176,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
     int framerate = 0, sleepFor = 0;
     double targetTime = calcWaitTime(framecap);
     Uint32 lastFrame = SDL_GetTicks();
+    bePiece* pickedPiece = NULL;
 
     while(!quit)
     {
@@ -192,14 +198,44 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             //convert for making new cells and checking clicks on cells
             clickPt = windowCoordToCameraCoord(clickPt, *(gamestate->scene->camera));
 
-            printf("click on: {%f, %f}\n", clickPt.x, clickPt.y);
+            //printf("click on: {%f, %f}\n", clickPt.x, clickPt.y);
             //printf("click vs window: {%f, %f}\n", state.click.x * gamestate->scene->camera->rect.w / global.windowW, state.click.y * gamestate->scene->camera->rect.h / global.windowH);
 
             //* check click for clicking on any cells
             int collidedIndex = beCheckMapClick(gamestate->board, *(gamestate->scene->camera), clickPt);
 
             if (collidedIndex >= 0)
+            {
                 printf("Clicked on %s (%d)\n", gamestate->board->names[collidedIndex], collidedIndex);
+                if (pickedPiece == NULL)
+                {
+                    //if you clicked on a board with a piece, set it to pickedPiece
+                    for(int i = 0; i < gamestate->board->numPlayers; i++)
+                    {
+                        for(int x = 0; x < gamestate->board->players[i].numPieces; x++)
+                        {
+                            if (gamestate->board->players[i].pieces[x].locationIndex == collidedIndex)
+                            {
+                                pickedPiece = &(gamestate->board->players[i].pieces[x]);
+                                printf("found piece %d from player %d\n", x, i);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    //check if move works. If so, do it, otherwise, don't do it. Either way reset pickedPiece
+                    if (gamestate->board->checkMovement(*pickedPiece, collidedIndex))
+                    {
+                        pickedPiece->locationIndex = collidedIndex;
+                        printf("moved piece\n");
+                    }
+                    else
+                        printf("movement failed\n");
+
+                    pickedPiece = NULL;
+                }
+            }
             else
                 printf("No click collision\n");
             //*/

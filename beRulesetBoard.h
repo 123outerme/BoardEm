@@ -5,6 +5,7 @@
 #include "CoSprite/csInput.h"
 #include "CoSprite/csUtility.h"
 #include "bePlayer.h"
+#include "games/Conqueror.h"
 #include <stdlib.h>
 
 #define INFO_MAX_LENGTH 2

@@ -13,9 +13,9 @@ bool conquerorCheckMovement(bePiece piece, int cellId)
 {
     bool isValid = false;
     int validMoves[42][6] = {
-                                 {1, 4, 5, 7, 32, -1}, //W. US: E. US, Alberta, Ontario, C. America, Kamchatka
+                                 {1, 4, 5, 7, -1, -1}, //W. US: E. US, Alberta, Ontario, C. America
                                  {0, 6, 5, 7, -1, -1}, //E. US: W. US, E. Canada, Ontario, C. America
-                                 {3, 4, -1, -1 , -1, -1}, //Alaska: N.W. Territory, Alberta
+                                 {3, 4, 32, -1 , -1, -1}, //Alaska: N.W. Territory, Alberta, Kamchatka
                                  {2, 4, 5, -1, -1, -1}, //N.W. Territory: Alaska, Alberta, Ontario
                                  {0, 2, 3, 5, -1, -1}, //Alberta: W. US, Alaska, N.W. Territory, Ontario
                                  {0, 1, 3, 4, 6, -1}, //Ontario: W. US, E. US, N.W. Territory, Alberta, E. Canada
@@ -57,7 +57,7 @@ bool conquerorCheckMovement(bePiece piece, int cellId)
                                  {39, 40, -1, -1, -1, -1} //E. Australia: new Guinea, W. Australia
                             };
 
-    for(int i = 0; i < 6; i++)
+    for(int i = 0; i < 6; i++)  //check if the place we are coming from is in the list of acceptable squares for the place we are trying to go to
         isValid = isValid | (piece.locationIndex == validMoves[cellId][i]);
 
     return isValid;
