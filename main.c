@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
         if (strcmp(argv[0], "-d") == 0 || strcmp(argv[0], "--debug"))
             debug = true;
     }
-    initCoSprite(NULL, "Board Em!", 960, 480, "./assets/Px437_ITT_BIOS_X.ttf", 24, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+    initCoSprite(NULL, "Board Em!", 960, 480, "./assets/Px437_ITT_BIOS_X.ttf", 12, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     //initialize players
     int playerCount = 2;
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     }
     bePiece testPiece;
     cSprite pieceSprite;
-    initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 1, 1}, (cDoubleRect) {0, 0, 24, 24}, NULL, 1.0, SDL_FLIP_NONE, 0, false, NULL, 5);
+    initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 1, 1}, (cDoubleRect) {0, 0, 24, 24}, NULL, 0.5, SDL_FLIP_NONE, 0, false, NULL, 5);
     beInitPiece(&testPiece, 0, pieceSprite, 0);
     beInitPlayer(&(players[0]), playerNames[0], &testPiece, 1, true, false, true, NULL, NULL);
 
@@ -131,7 +131,8 @@ int gameLoop(beGameState* gamestate)
 
     //test init; not sure how I should handle drawing the board
     cCamera testCam;
-    initCCamera(&testCam, (cDoubleRect) {0, 0, 36, 20}, 1.0, 0.0);
+    initCCamera(&testCam, (cDoubleRect) {0, 0, 40, 20}, 1.0, 0.0);
+    //36 x-camera-coords for game board display, the last 4 are for scores/info (theoretically)
     cScene testScene;
     initCScene(&testScene, gamestate->board->bgColor, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
     gamestate->scene = &testScene;
@@ -201,7 +202,6 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             //printf("click on: {%f, %f}\n", clickPt.x, clickPt.y);
             //printf("click vs window: {%f, %f}\n", state.click.x * gamestate->scene->camera->rect.w / global.windowW, state.click.y * gamestate->scene->camera->rect.h / global.windowH);
 
-            //* check click for clicking on any cells
             int collidedIndex = beCheckMapClick(gamestate->board, *(gamestate->scene->camera), clickPt);
 
             if (collidedIndex >= 0)
@@ -238,7 +238,6 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             }
             else
                 printf("No click collision\n");
-            //*/
         }
 
         // WASD camera movement

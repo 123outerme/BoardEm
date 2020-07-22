@@ -294,7 +294,10 @@ bool beCheckCellClick(beBoard* board, cCamera camera, int cellIndex, cDoublePt c
     for(int i = 0; i < board->ptsSize[cellIndex]; i++)
         lineTangible[i] = true;
 
-    for(int rayY = 0; rayY < click.y; rayY++) //cast a ray heading in the +y direction
+    cDoublePt boardOriginPt = {0, 0};
+    boardOriginPt = cCameraCoordToWindowCoord(boardOriginPt, camera);
+
+    for(int rayY = boardOriginPt.y; rayY < click.y; rayY++) //cast a ray heading from the top of the board in the +y direction
     {
         bool collided = false;
         for(int i = 0; i < board->ptsSize[cellIndex]; i++)
@@ -465,10 +468,16 @@ void beDrawCellCoSprite(cDoublePt* cell, int ptsSize, SDL_Color color, cCamera c
     }
 }
 
+/** \brief Draws a piece at a cell's center point
+ *
+ * \param piece bePiece
+ * \param cellCenterPts cDoublePt*
+ * \param camera cCamera
+ */
 void beDrawPieceCoSprite(bePiece piece, cDoublePt* cellCenterPts, cCamera camera)
 {
-    piece.sprite.drawRect.x = cellCenterPts[piece.locationIndex].x - piece.sprite.drawRect.w / 2;
-    piece.sprite.drawRect.y = cellCenterPts[piece.locationIndex].y - piece.sprite.drawRect.h / 2;
+    piece.sprite.drawRect.x = cellCenterPts[piece.locationIndex].x - piece.sprite.drawRect.w * piece.sprite.scale / 2;
+    piece.sprite.drawRect.y = cellCenterPts[piece.locationIndex].y - piece.sprite.drawRect.h * piece.sprite.scale / 2;
 
     drawCSprite(piece.sprite, camera, false, false);
 }
