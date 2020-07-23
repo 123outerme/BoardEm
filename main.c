@@ -10,6 +10,7 @@
 //#include "games/SnakesLadders.h"
 
 //defines
+#define GAME_COUNT 3
 #define TURNFRAME_QUIT 1
 #define TURNFRAME_CONTINUE 0
 
@@ -29,6 +30,10 @@ void testBonus(beBoard* board);
 //global vars
 bool debug;
 int framecap = 120;
+
+char* gameFolders[GAME_COUNT] = {"Conqueror", "Corporation", "SnakesLadders"};
+bool (*checkMovementFuncts[GAME_COUNT])(bePiece, int) = {&conquerorCheckMovement, NULL, NULL};
+void (*gameSetupFuncts[GAME_COUNT])(beBoard*) = {&conquerorGameSetup, NULL, NULL};
 
 int main(int argc, char* argv[])
 {
@@ -58,11 +63,12 @@ int main(int argc, char* argv[])
 
     //init the correct board
     beBoard board;
-    beConstructGameBoard(&board, players, playerCount, "Conqueror");
+
+    beConstructGameBoard(&board, players, playerCount, gameFolders[0], checkMovementFuncts[0]);
 
     //initialize ruleset
     beRuleset rules;
-    beInitRuleset(&rules, NULL, &testTurn, &testUpdate, &testWinCon, &testBonus, NULL);
+    beInitRuleset(&rules, NULL, gameSetupFuncts[0], &testTurn, &testUpdate, &testWinCon, &testBonus, NULL);
 
     //initialize gamestate (needs ruleset + board)
     beGameState gamestate;
@@ -89,21 +95,42 @@ int gameLoop(beGameState* gamestate)
     //test init; not sure how I should handle drawing the board
     cCamera testCam;
     initCCamera(&testCam, (cDoubleRect) {0, 0, 40, 20}, 1.0, 0.0);
+
+    cText phaseText;
+    initCText(&phaseText, "Setup\nPhase", (cDoubleRect) {36, 0, 8 * global.mainFont.fontSize, 8 * global.mainFont.fontSize}, (SDL_Color) {0x00, 0x00, 0x00, 0xFF}, gamestate->board->bgColor, NULL, 1.0, SDL_FLIP_NONE, 0, true, 5);
+
+    cText turnText;
+    initCText(&turnText, "Turn 0\nPlayer 1", (cDoubleRect) {36, 2, 8 * global.mainFont.fontSize, 8 * global.mainFont.fontSize}, (SDL_Color) {0x00, 0x00, 0x00, 0xFF}, gamestate->board->bgColor, NULL, 1.0, SDL_FLIP_NONE, 0, true, 5);
+
     //36 x-camera-coords for game board display, the last 4 are for scores/info (theoretically)
     cScene testScene;
-    initCScene(&testScene, gamestate->board->bgColor, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, NULL, 0);
+    initCScene(&testScene, gamestate->board->bgColor, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, (cText*[2]) {&phaseText, &turnText}, 2);
     gamestate->scene = &testScene;
+    gamestate->ruleset->gameSetup(gamestate->board);
     startTime = SDL_GetTicks();
 
     while(!quit)
     {
         for(int i = 0; i < gamestate->board->numPlayers; i++)
-        {
-            //for all players, allow players to perform their turn
+        { //for all players
+
+            //change phase text if necessary
+            if (gamestate->board->gamePhase == BE_PHASE_PLAY && strcmp(phaseText.str, "Play\nPhase") != 0)
+                updateCText(&phaseText, "Play\nPhase");
+
+            //update turn/player information
+            {
+                char* tempText = calloc(18 + strlen(gamestate->board->players[i].name), sizeof(char));
+                snprintf(tempText, 17 + strlen(gamestate->board->players[i].name), "Turn %d\nPlayer %d\n%s", gamestate->turnNum, i + 1, gamestate->board->players[i].name);
+                updateCText(&turnText, tempText);
+                free(tempText);
+            }
+
+            //allow player to perform their turn
             cInputState state = takeTurn(gamestate, i);
             if (state.quitInput)
             {
-                //force quit; shut down online (if any), pass host (if necessary)
+                //force quit; pass host (if necessary), shut down online (if any)
                 printf("force quitting\n");
                 quit = true;
                 break;
@@ -121,6 +148,7 @@ int gameLoop(beGameState* gamestate)
                 break;
             }
         }
+        gamestate->turnNum++;
     }
     return returnCode;
 }
@@ -224,7 +252,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
         if (state.keyStates[SDL_SCANCODE_C])
             gamestate->scene->camera->zoom += .01;
 
-        //F1 game board refresh
+        //F1 temp game board refresh
         if (state.keyStates[SDL_SCANCODE_F1])
         {
             int playerCount = gamestate->board->numPlayers;
@@ -234,7 +262,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
 
             beDestroyBoard(gamestate->board);
 
-            beConstructGameBoard(gamestate->board, tempPlayers, playerCount, "Conqueror");
+            beConstructGameBoard(gamestate->board, tempPlayers, playerCount, "Conqueror", &conquerorCheckMovement);
             free(tempPlayers);
         }
 

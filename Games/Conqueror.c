@@ -2,9 +2,7 @@
 
 /** \brief Checks if a movement on
  *
- * \param board beBoard*
- * \param player bePlayer*
- * \param pieceId int
+ * \param piece bePiece
  * \param cellId int
  * \return bool - true if movement is valid and therefore applied, false if not and therefore not applied
  *
@@ -61,4 +59,40 @@ bool conquerorCheckMovement(bePiece piece, int cellId)
         isValid = isValid | (piece.locationIndex == validMoves[cellId][i]);
 
     return isValid;
+}
+
+/** \brief Sets up a game that has the Conqueror ruleset
+ *
+ * \param board beBoard* the board to be initialized
+ */
+void conquerorGameSetup(beBoard* board)
+{
+    //technically a 2-player game is supposed to have a 3rd neutral army but who cares
+    for(int i = 0; i < board->numPlayers; i++)
+    {
+        board->players[i].subclass = malloc(sizeof(beConquerorArmy));
+        initConquerorArmy((beConquerorArmy*) board->players[i].subclass, 50 - (5 * board->numPlayers));
+        board->players[i].freeSubclass = &destroyConquerorArmy;
+    }
+    board->gamePhase = BE_PHASE_SETUP;
+}
+
+/** \brief Inits an army for a player
+ *
+ * \param army beConquerorArmy*
+ * \param reinforcements int
+ */
+void initConquerorArmy(beConquerorArmy* army, int reinforcements)
+{
+    army->reinforcements = reinforcements;
+}
+
+/** \brief De-allocates an army for a player
+ *
+ * \param armyPtr void*
+ */
+void destroyConquerorArmy(void* armyPtr)
+{
+    beConquerorArmy* army = (beConquerorArmy*) armyPtr;
+    army->reinforcements = 0;
 }

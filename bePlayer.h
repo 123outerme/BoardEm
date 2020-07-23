@@ -4,6 +4,12 @@
 #include "CoSprite/csGraphics.h"
 #include <stdlib.h>
 
+typedef struct _beAction
+{
+    //how the hell do I even do this
+    int typeCode;  /**< 0: movement, ... */
+} beAction;
+
 typedef struct _bePiece
 {
     int num; /**< Either ID num, or num of troops */
@@ -16,7 +22,9 @@ typedef struct _bePlayer
     char* name;  /**< Especially useful for multiplayer */
     int score;
     bePiece* pieces;  /**< Array of pieces this player owns */
-    int numPieces; /**< Size of `pieces` */
+    int numPieces;  /**< Size of `pieces` */
+    beAction* actions;  /**< Array of actions this player has taken this turn */
+    int numActions;  /**< Size of `actions` */
     bool isLocal;  /**< if false, they are an online representation of another player */
     bool isAI;  /**< if true, is an AI player */
     bool active;  /**< if false, player is disabled */

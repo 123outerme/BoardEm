@@ -109,7 +109,7 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, beCell* cell
  * \param gamestate beGameState*
  * \param players bePlayer*
  */
-void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, char* folderName)
+void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, char* folderName, bool (*checkMovement)(bePiece, int))
 {
     char* pointsFile = calloc(MAX_PATH, sizeof(char));
     snprintf(pointsFile, MAX_PATH, "assets/%s/cells.dat", folderName);  //gives us a string that takes us to our cells
@@ -178,10 +178,6 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
     strcat(mapImgPath, folderName);
     strcat(mapImgPath, "/map.png");
 
-    bool (*checkMovement)(bePiece, int) = NULL;
-    if (strcmp(folderName, "Conqueror") == 0)
-        checkMovement = &(conquerorCheckMovement);
-
     beInitBoard(board, players, playerCount, cells, cellCount, mapImgPath, 36, 20, checkMovement);
     free(mapImgPath);
     //free(cells);
@@ -196,6 +192,7 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
  * \param void (*applyMoneyGameBonus)(beBoard*)
  */
 void beInitRuleset(beRuleset* ruleset, void* subclass,
+                    void (*gameSetup)(beBoard*),
                     int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
@@ -203,6 +200,7 @@ void beInitRuleset(beRuleset* ruleset, void* subclass,
                     void (*freeSubclass)(void*))
 {
     ruleset->subclass = subclass;
+    ruleset->gameSetup = gameSetup;
     ruleset->playerTurnFrame = playerTurnFrame;
     ruleset->updateScores = updateScores;
     ruleset->checkWin = checkWin;

@@ -13,6 +13,8 @@ void beInitGameState(beGameState* gamestate, beRuleset* ruleset, beBoard* board)
     gamestate->ruleset = ruleset;
     gamestate->board = board;
     gamestate->onlineState = BE_OFFLINE;
+    gamestate->turnNum = 0;
+    exportedTurnData = NULL;
 }
 
 /** \brief Exports the turn data to JSON format, outputted to `exportedTurnData`.
@@ -22,6 +24,9 @@ void beInitGameState(beGameState* gamestate, beRuleset* ruleset, beBoard* board)
  */
 char* beExportTurnData(beGameState* gamestate)
 {
+    if (exportedTurnData != NULL)
+        free(exportedTurnData);
+
     //TODO
     return exportedTurnData;
 }
