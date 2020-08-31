@@ -21,7 +21,9 @@ bool conquerorCheckMovement(bePiece piece, int cellId);
 //ruleset
 void conquerorGameSetup(beBoard* board);
 void conquerorApplyCorpBonus(bePlayer* player);
-void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, int collidedIndex);
+void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, int destCellIndex);
+void conquerorUpdateScores(beBoard* board);
+int conquerorCheckWin(beBoard* board);
 
 //player
 void initConquerorArmy(beConquerorArmy* army, int reinforcements);

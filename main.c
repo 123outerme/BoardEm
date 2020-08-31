@@ -20,8 +20,6 @@ int gameLoop(beGameState* gamestate);
 cInputState takeTurn(beGameState* gamestate, int playerIndex);
 
 //test functions
-int testTurn(beBoard* board, bePlayer* player, cInputState input);
-void testUpdate(beBoard* board);
 int testWinCon(beBoard* board);
 void testBonus(beBoard* board);
 
@@ -32,7 +30,9 @@ int framecap = 120;
 char* gameFolders[GAME_COUNT] = {"Conqueror", "Corporation", "SnakesLadders"};
 bool (*checkMovementFuncts[GAME_COUNT])(bePiece, int) = {&conquerorCheckMovement, NULL, NULL};
 void (*gameSetupFuncts[GAME_COUNT])(beBoard*) = {&conquerorGameSetup, NULL, NULL};
-void (*playerApplyMovementFuncts[GAME_COUNT])(beBoard*, bePlayer*, bePiece*, int) = {&conquerorApplyMovement, NULL, NULL};
+void (*applyMovementFuncts[GAME_COUNT])(beBoard*, bePlayer*, bePiece*, int) = {&conquerorApplyMovement, NULL, NULL};
+void (*updateScoreFuncts[GAME_COUNT])(beBoard*) = {&conquerorUpdateScores, NULL, NULL};
+int (*checkWinFuncts[GAME_COUNT])(beBoard*) = {&conquerorCheckWin, NULL, NULL};
 void (*corporationBonusFuncts[GAME_COUNT])(bePlayer*) = {&conquerorApplyCorpBonus, NULL, NULL};
 
 int main(int argc, char* argv[])
@@ -71,12 +71,15 @@ int main(int argc, char* argv[])
 
     int boardIndex = 0; //starts at -1 when there is an actual menu to choose the game type
     int rulesetIndex = 0;
-    //choose game
+
+    //choose game board/ruleset
+
+    //initialize game board
     beConstructGameBoard(&board, players, playerCount, gameFolders[boardIndex], checkMovementFuncts[boardIndex]);
 
     //initialize ruleset
     beRuleset rules;
-    beInitRuleset(&rules, NULL, gameSetupFuncts[rulesetIndex], playerApplyMovementFuncts[rulesetIndex], &testUpdate, &testWinCon, corporationBonusFuncts[rulesetIndex], NULL);
+    beInitRuleset(&rules, NULL, gameSetupFuncts[rulesetIndex], applyMovementFuncts[rulesetIndex], updateScoreFuncts[rulesetIndex], checkWinFuncts[rulesetIndex], corporationBonusFuncts[rulesetIndex], NULL);
 
     //initialize gamestate (needs ruleset + board)
     beGameState gamestate;
@@ -110,9 +113,11 @@ int gameLoop(beGameState* gamestate)
     cText turnText;
     initCText(&turnText, "Turn 0\nPlayer 1", (cDoubleRect) {36, 2, 8 * global.mainFont.fontSize, 8 * global.mainFont.fontSize}, (SDL_Color) {0x00, 0x00, 0x00, 0xFF}, gamestate->board->bgColor, NULL, 1.0, SDL_FLIP_NONE, 0, true, 5);
 
+    cText scoresText;
+    initCText(&scoresText, "P1: 0", (cDoubleRect) {36, 4, 8 * global.mainFont.fontSize, 8 * global.mainFont.fontSize}, (SDL_Color) {0x00, 0x00, 0x00, 0xFF}, gamestate->board->bgColor, NULL, 1.0, SDL_FLIP_NONE, 0, true, 5);
     //36 x-camera-coords for game board display, the last 4 are for scores/info (theoretically)
     cScene testScene;
-    initCScene(&testScene, gamestate->board->bgColor, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, (cText*[2]) {&phaseText, &turnText}, 2);
+    initCScene(&testScene, gamestate->board->bgColor, &testCam, NULL, 0, NULL, 0, (cResource*[1]) {&(gamestate->board->boardResource)}, 1, (cText*[3]) {&phaseText, &turnText, &scoresText}, 3);
     gamestate->scene = &testScene;
     gamestate->ruleset->gameSetup(gamestate->board);
     startTime = SDL_GetTicks();
@@ -122,15 +127,29 @@ int gameLoop(beGameState* gamestate)
         for(int i = 0; i < gamestate->board->numPlayers; i++)
         { //for all players
 
+            //check gamestate to update and/or draw scores
+            gamestate->ruleset->updateScores(gamestate->board);
+
             //change phase text if necessary
             if (gamestate->board->gamePhase == BE_PHASE_PLAY && strcmp(phaseText.str, "Play\nPhase") != 0)
                 updateCText(&phaseText, "Play\nPhase");
 
             //update turn/player information
             {
-                char* tempText = calloc(18 + strlen(gamestate->board->players[i].name), sizeof(char));
-                snprintf(tempText, 17 + strlen(gamestate->board->players[i].name), "Turn %d\nPlayer %d\n%s", gamestate->turnNum, i + 1, gamestate->board->players[i].name);
+                char* tempText = calloc(19 + strlen(gamestate->board->players[i].name), sizeof(char));
+                snprintf(tempText, 18 + strlen(gamestate->board->players[i].name), "Turn %d\nPlayer %d\n%s", gamestate->turnNum, i + 1, gamestate->board->players[i].name);
                 updateCText(&turnText, tempText);
+                free(tempText);
+
+                tempText = calloc(9 * gamestate->board->numPlayers, sizeof(char));
+                char* playerScoreText = calloc(10, sizeof(char));
+                for(int x = 0; x < gamestate->board->numPlayers; x++)
+                {
+                    snprintf(playerScoreText, 9, "P%d: %d\n", x + 1, gamestate->board->players[x].score);
+                    strncat(tempText, playerScoreText, 9 * gamestate->board->numPlayers);
+                }
+                free(playerScoreText);
+                updateCText(&scoresText, tempText);
                 free(tempText);
             }
 
@@ -144,9 +163,6 @@ int gameLoop(beGameState* gamestate)
                 break;
             }
             //gamestate->ruleset->playerTurnFrame(gamestate->board, &(gamestate->board->players[i]));
-
-            //check gamestate to update and/or draw scores
-            gamestate->ruleset->updateScores(gamestate->board);
 
             //check for a winner
             if (gamestate->ruleset->checkWin(gamestate->board) != 0)
@@ -179,7 +195,7 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
         state = cGetInputState(true);
 
         //intercept, check for generic key options like pausing, quitting, etc.
-        if (state.quitInput)
+        if (state.quitInput || state.keyStates[SDL_SCANCODE_RETURN] || state.keyStates[SDL_SCANCODE_ESCAPE])
             quit = true;
 
         if (state.isClick)
@@ -319,13 +335,6 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
     }
 
     return state;
-}
-
-void testUpdate(beBoard* board)
-{
-    int s = board->cellsSize;
-    printf("testing update scores\n", s);
-    //nothing
 }
 
 int testWinCon(beBoard* board)

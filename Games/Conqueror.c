@@ -1,6 +1,6 @@
 #include "Conqueror.h"
 
-/** \brief Checks if a movement on
+/** \brief Checks if a movement on the Conqueror board is valid
  *
  * \param piece bePiece
  * \param cellId int
@@ -61,9 +61,16 @@ bool conquerorCheckMovement(bePiece piece, int cellId)
     return isValid;
 }
 
-void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, int collidedIndex)
+/** \brief Applies movement for a Conqueror game (does battle on the board)
+ *
+ * \param board beBoard*
+ * \param player bePlayer*
+ * \param piece bePiece*
+ * \param destCellIndex int
+ */
+void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, int destCellIndex)
 {
-    if (piece->num > 1)  //if we have 2+ troops in our army
+    if (piece->num >= 0)  //if we have 2+ troops in our army
     {
         //do battle
 
@@ -75,7 +82,7 @@ void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, in
         {
             //free(player->pieces);  //idk why this has to not free in order to not be dumb
             player->pieces = piecesRealloc;
-            beInitPiece(&(player->pieces[player->numPieces]), resultTroops, piece->sprite, collidedIndex);
+            beInitPiece(&(player->pieces[player->numPieces]), resultTroops, piece->sprite, destCellIndex);
             player->numPieces++;
         }
         else
@@ -84,6 +91,39 @@ void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, in
             cLogEvent(boardEmLogger, "ERROR", "Out of memory", "Cannot realloc player pieces array");
         }
     }
+}
+
+/** \brief Updates scores for a Conqueror game
+ *
+ * \param board beBoard*
+ */
+void conquerorUpdateScores(beBoard* board)
+{
+
+    for(int i = 0; i < board->numPlayers; i++)
+    {
+        board->players[i].score = board->players[i].numPieces * 5;  //5 points for each territory
+        for(int x = 0; x < board->players[i].numPieces; x++)
+        {
+            board->players[i].score += board->players[i].pieces[x].num;  //1 point for each troop in each territory
+        }
+    }
+}
+
+/** \brief Checks if a Conqueror game has been won
+ *
+ * \param board beBoard*
+ * \return int 1-4 if that num player won, otherwise 0
+ */
+int conquerorCheckWin(beBoard* board)
+{
+    int winningPlayerIndex = 0;
+    for(int i = 0; i < board->numPlayers; i++)
+    {
+        if (board->players[i].numPieces == board->cellsSize)
+            winningPlayerIndex = i + 1;
+    }
+    return winningPlayerIndex;
 }
 
 /** \brief Sets up a game that has the Conqueror ruleset
