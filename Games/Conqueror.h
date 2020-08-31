@@ -13,7 +13,6 @@ typedef struct _beConqueror
 typedef struct _beConquerorArmy
 {
     int reinforcements;
-    SDL_Color color;
 } beConquerorArmy;
 
 //board
@@ -25,7 +24,7 @@ void conquerorApplyCorpBonus(bePlayer* player);
 void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, int collidedIndex);
 
 //player
-void initConquerorArmy(beConquerorArmy* army, int reinforcements, SDL_Color color);
+void initConquerorArmy(beConquerorArmy* army, int reinforcements);
 void destroyConquerorArmy(void* armyPtr);
 
 #endif // CONQUEROR_H_INCLUDED

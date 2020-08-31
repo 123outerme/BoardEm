@@ -69,6 +69,19 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, beCell* cell
     memcpy(board->players, players, numPlayers * sizeof(bePlayer));
     board->numPlayers = numPlayers;
 
+    {  //init player colors
+        SDL_Color colors[4] = BE_PLAYER_COLORS;
+
+        for(int i = 0; i < numPlayers; i++)
+        {
+            for(int x = 0; x < board->players[i].numPieces; x++)
+            {  //sets color mod for player color
+                SDL_SetTextureColorMod(board->players[i].pieces[x].sprite.texture, colors[i].r, colors[i].g, colors[i].b);
+                SDL_SetTextureAlphaMod(board->players[i].pieces[x].sprite.texture, colors[i].a);
+            }
+        }
+    }
+
     initCResource(&(board->boardResource), (void*) board, beDrawBoardCoSprite, beDestroyBoardCoSprite, 5);
 
     //printf("--%d\n", cellsSize);

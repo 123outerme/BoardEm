@@ -93,12 +93,11 @@ void conquerorApplyMovement(beBoard* board, bePlayer* player, bePiece* piece, in
 void conquerorGameSetup(beBoard* board)
 {
     //technically a 2-player game is supposed to have a 3rd neutral army but who cares
-    SDL_Color colors[4] = {(SDL_Color) {0xFF, 0x00, 0x00, 0xD0}, (SDL_Color) {0x00, 0x00, 0xFF, 0xD0}, (SDL_Color) {0x00, 0xFF, 0x00, 0xD0}, (SDL_Color) {0xD1, 0xD6, 0x44, 0xD0}};
 
     for(int i = 0; i < board->numPlayers; i++)
     {
         board->players[i].subclass = malloc(sizeof(beConquerorArmy));
-        initConquerorArmy((beConquerorArmy*) board->players[i].subclass, 50 - (5 * board->numPlayers), colors[i]);
+        initConquerorArmy((beConquerorArmy*) board->players[i].subclass, 50 - (5 * board->numPlayers));
         board->players[i].freeSubclass = &destroyConquerorArmy;
     }
     board->gamePhase = BE_PHASE_SETUP;
@@ -116,10 +115,9 @@ void conquerorApplyCorpBonus(bePlayer* player)
  * \param army beConquerorArmy*
  * \param reinforcements int
  */
-void initConquerorArmy(beConquerorArmy* army, int reinforcements, SDL_Color color)
+void initConquerorArmy(beConquerorArmy* army, int reinforcements)
 {
     army->reinforcements = reinforcements;
-    army->color = color;
 }
 
 /** \brief De-allocates an army for a player
@@ -130,5 +128,4 @@ void destroyConquerorArmy(void* armyPtr)
 {
     beConquerorArmy* army = (beConquerorArmy*) armyPtr;
     army->reinforcements = 0;
-    army->color = (SDL_Color) {0, 0, 0, 0};
 }
