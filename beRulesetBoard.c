@@ -173,10 +173,9 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
     free(pointsFile);
 
     //initialize board (needs players + cells)
-    char* mapImgPath = calloc(MAX_PATH, sizeof(char));
-    strcpy(mapImgPath, "assets/");
-    strcat(mapImgPath, folderName);
-    strcat(mapImgPath, "/map.png");
+    char* mapImgPath = calloc(MAX_PATH + 1, sizeof(char));
+
+    snprintf(mapImgPath, MAX_PATH, "assets/%s/map.png", folderName);
 
     beInitBoard(board, players, playerCount, cells, cellCount, mapImgPath, 36, 20, checkMovement);
     free(mapImgPath);
@@ -193,18 +192,18 @@ void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, ch
  */
 void beInitRuleset(beRuleset* ruleset, void* subclass,
                     void (*gameSetup)(beBoard*),
-                    int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
+                    void (*playerApplyMovement)(beBoard*, bePlayer*, bePiece*, int),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
-                    void (*applyMoneyGameBonus)(beBoard*),
+                    void (*applyCorporationBonus)(bePlayer*),
                     void (*freeSubclass)(void*))
 {
     ruleset->subclass = subclass;
     ruleset->gameSetup = gameSetup;
-    ruleset->playerTurnFrame = playerTurnFrame;
+    ruleset->playerApplyMovement = playerApplyMovement;
     ruleset->updateScores = updateScores;
     ruleset->checkWin = checkWin;
-    ruleset->applyMoneyGameBonus = applyMoneyGameBonus;
+    ruleset->applyCorporationBonus = applyCorporationBonus;
     ruleset->freeSubclass = freeSubclass;
 }
 
@@ -374,10 +373,10 @@ void beDestroyBoard(beBoard* board)
  */
 void beDestroyRuleset(beRuleset* ruleset)
 {
-    ruleset->playerTurnFrame = NULL;
+    ruleset->playerApplyMovement = NULL;
     ruleset->updateScores = NULL;
     ruleset->checkWin = NULL;
-    ruleset->applyMoneyGameBonus = NULL;
+    ruleset->applyCorporationBonus = NULL;
 
     //subclass stuff
     if (ruleset->freeSubclass)

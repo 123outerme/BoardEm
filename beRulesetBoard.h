@@ -43,10 +43,10 @@ typedef struct _beRuleset
 {
     void* subclass;  /**< The subclass data for the ruleset */
     void (*gameSetup)(beBoard*);  /**< Takes a ptr to the board */
-    int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState);  /**< Output 1 for quit, 0 for continue */
+    void (*playerApplyMovement)(beBoard*, bePlayer*, bePiece*, int);
     void (*updateScores)(beBoard*);
     int (*checkWin)(beBoard*);  /**< checks the win condition(s). Outputs 1-4 if that # player won, otherwise outputs 0 */
-    void (*applyMoneyGameBonus)(beBoard*);  /**< If landing on "GO" in "Monopoly"-type game, apply this bonus */
+    void (*applyCorporationBonus)(bePlayer*);  /**< If landing on "GO" in "Monopoly"-type game, apply this bonus */
     void (*freeSubclass)(void*);  /**< Cleanup function for subclass */
 } beRuleset;
 
@@ -55,10 +55,10 @@ void beInitBoard(beBoard* board, bePlayer* players, int numPlayers, beCell* cell
 void beConstructGameBoard(beBoard* board, bePlayer* players, int playerCount, char* folderName, bool (*checkMovement)(bePiece, int));
 void beInitRuleset(beRuleset* ruleset, void* subclass,
                     void (*gameSetup)(beBoard*),
-                    int (*playerTurnFrame)(beBoard*, bePlayer*, cInputState),
+                    void (*playerApplyMovement)(beBoard*, bePlayer*, bePiece*, int),
                     void (*updateScores)(beBoard*),
                     int (*checkWin)(beBoard*),
-                    void (*applyMoneyGameBonus)(beBoard*),
+                    void (*applyCorporationBonus)(bePlayer*),
                     void (*freeSubclass)(void*));
 
 //functions that allows player to select a specific cell (for movement, information, etc.)
@@ -72,4 +72,8 @@ void beDestroyRuleset(beRuleset* ruleset);
 //CoSprite function pointer "targets"
 void beDrawBoardCoSprite(void* ptrBoard, cCamera camera);
 void beDestroyBoardCoSprite(void* ptrBoard);
+
+//global variable declarations:
+cLogger boardEmLogger;
+
 #endif // BEBOARDGAME_H_INCLUDED

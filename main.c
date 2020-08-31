@@ -11,8 +11,6 @@
 
 //defines
 #define GAME_COUNT 3
-#define TURNFRAME_QUIT 1
-#define TURNFRAME_CONTINUE 0
 
 #define calcWaitTime(x) x == 0 ? 0 : 1000.0 / x
 
@@ -34,6 +32,8 @@ int framecap = 120;
 char* gameFolders[GAME_COUNT] = {"Conqueror", "Corporation", "SnakesLadders"};
 bool (*checkMovementFuncts[GAME_COUNT])(bePiece, int) = {&conquerorCheckMovement, NULL, NULL};
 void (*gameSetupFuncts[GAME_COUNT])(beBoard*) = {&conquerorGameSetup, NULL, NULL};
+void (*playerApplyMovementFuncts[GAME_COUNT])(beBoard*, bePlayer*, bePiece*, int) = {&conquerorApplyMovement, NULL, NULL};
+void (*corporationBonusFuncts[GAME_COUNT])(bePlayer*) = {&conquerorApplyCorpBonus, NULL, NULL};
 
 int main(int argc, char* argv[])
 {
@@ -44,6 +44,11 @@ int main(int argc, char* argv[])
             debug = true;
     }
     initCoSprite(NULL, "Board Em!", 960, 480, "./assets/Px437_ITT_BIOS_X.ttf", 12, 5, (SDL_Color) {255, 28, 198, 0xFF}, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+
+    //initialize logging
+    initCLogger(&boardEmLogger, "./logs/boardem.log", "%m/%d/%y %I:%M:%S %p %Z");
+
+    //cLogEvent(boardEmLogger, "INFO", "Initialized", "Testing logging");
 
     //initialize players
     int playerCount = 2;
@@ -58,17 +63,20 @@ int main(int argc, char* argv[])
     bePiece testPiece;
     cSprite pieceSprite;
     initCSprite(&pieceSprite, NULL, "./assets/piece.png", 0, (cDoubleRect) {0, 0, 1, 1}, (cDoubleRect) {0, 0, 24, 24}, NULL, 0.5, SDL_FLIP_NONE, 0, false, NULL, 5);
-    beInitPiece(&testPiece, 0, pieceSprite, 0);
+    beInitPiece(&testPiece, 2, pieceSprite, 0);
     beInitPlayer(&(players[0]), playerNames[0], &testPiece, 1, true, false, true, NULL, NULL);
 
     //init the correct board
     beBoard board;
 
-    beConstructGameBoard(&board, players, playerCount, gameFolders[0], checkMovementFuncts[0]);
+    int boardIndex = 0; //starts at -1 when there is an actual menu to choose the game type
+    int rulesetIndex = 0;
+    //choose game
+    beConstructGameBoard(&board, players, playerCount, gameFolders[boardIndex], checkMovementFuncts[boardIndex]);
 
     //initialize ruleset
     beRuleset rules;
-    beInitRuleset(&rules, NULL, gameSetupFuncts[0], &testTurn, &testUpdate, &testWinCon, &testBonus, NULL);
+    beInitRuleset(&rules, NULL, gameSetupFuncts[rulesetIndex], playerApplyMovementFuncts[rulesetIndex], &testUpdate, &testWinCon, corporationBonusFuncts[rulesetIndex], NULL);
 
     //initialize gamestate (needs ruleset + board)
     beGameState gamestate;
@@ -212,11 +220,16 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
                     //check if move works. If so, do it, otherwise, don't do it. Either way reset pickedPiece
                     if (gamestate->board->checkMovement(*pickedPiece, collidedIndex))
                     {
-                        pickedPiece->locationIndex = collidedIndex;
-                        printf("moved piece\n");
+                        gamestate->ruleset->playerApplyMovement(gamestate->board, &(gamestate->board->players[playerIndex]), pickedPiece, collidedIndex);
+
+                        //pickedPiece->locationIndex = collidedIndex; //old movement code
+
+                        //printf("moved piece\n");
                     }
                     else
-                        printf("movement failed\n");
+                    {
+                        //printf("movement failed\n");
+                    }
 
                     pickedPiece = NULL;
                 }
@@ -280,15 +293,10 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
             printf("Framerate: %d\n", framerate);
 
 
-        //pass to customized turn stuff
+        /* pass to customized turn stuff
         if (!(gamestate->board->players[playerIndex].isAI) && gamestate->board->players[playerIndex].isLocal)
         {  //if it's the local human player's turn
-            int code = gamestate->ruleset->playerTurnFrame(gamestate->board, &(gamestate->board->players[playerIndex]), state);
-            if (code == TURNFRAME_QUIT)
-            {
-                printf("--pressed Enter\n");
-                quit = true;
-            }
+            //
         }
         else
         {
@@ -304,23 +312,13 @@ cInputState takeTurn(beGameState* gamestate, int playerIndex)
                 }
             }
         }
+        //*/
         if ((sleepFor = targetTime - (SDL_GetTicks() - lastFrame)) > 0)
             SDL_Delay(sleepFor);  //FPS limiter; rests for (16 - time spent) ms per frame, effectively making each frame run for ~16 ms, or 60 FPS
         lastFrame = SDL_GetTicks();
     }
 
     return state;
-}
-
-int testTurn(beBoard* board, bePlayer* player, cInputState input)
-{
-    printf(/*"testing turn for player %s\n"*/ "", player->name, board->cellsSize);
-    //waitForKey(true);
-    //nothing
-    if (input.keyStates[SDL_SCANCODE_RETURN])
-        return 1;
-
-    return 0;
 }
 
 void testUpdate(beBoard* board)

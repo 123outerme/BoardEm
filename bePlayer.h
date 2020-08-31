@@ -12,7 +12,7 @@ typedef struct _beAction
 
 typedef struct _bePiece
 {
-    int num; /**< Either ID num, or num of troops */
+    int num; /**< ID num, or num of troops, or whatever */
     cSprite sprite;
     int locationIndex;
 } bePiece;
